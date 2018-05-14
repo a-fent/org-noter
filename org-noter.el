@@ -1064,7 +1064,7 @@ Only available with PDF Tools."
                      (page  (alist-get 'page item))
                      (edges (or (car (alist-get 'markup-edges item))
                                 (alist-get 'edges item)))
-                     name)
+                     name real-edges text)
                  (when (and (memq type chosen-annots) (> page 0))
                    (setq name (cond ((eq type 'highlight) "Highlight")
                                     ((eq type 'underline) "Underline")
@@ -1072,8 +1072,16 @@ Only available with PDF Tools."
                                     ((eq type 'text) "Text note")
                                     ((eq type 'strike-out) "Strikeout")
                                     ((eq type 'link) "Link")))
-                   (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2)
-                         output-data)))))
+                   (if (eq type 'highlight)
+                       (progn (setq real-edges (pdf-annot-edges-to-region (alist-get 'markup-edges item)))
+                              (setq text (or (assoc-default 'subject item) (assoc-default 'content item)
+                                             (replace-regexp-in-string "-?\n"
+                                                                       (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
+                                                                       (pdf-info-gettext page real-edges))))
+                              (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2 (format "%s" text))
+                                    output-data))
+                     (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2)
+                           output-data))))))
            (when output-data
              (push (vector "Annotations" nil 1) output-data)))))
 
@@ -1100,7 +1108,8 @@ Only available with PDF Tools."
                (insert "\n"))
              (when (aref data 1)
                (org-entry-put
-                nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))))
+                nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))
+               (insert (aref data 3))))
 
            (setq ast (org-noter--parse-root))
            (org-noter--narrow-to-root ast)
