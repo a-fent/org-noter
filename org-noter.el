@@ -1130,7 +1130,7 @@ Only available with PDF Tools."
              (when (aref data 1)
                (org-entry-put
                 nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))
-               (when (aref data 3) (insert (aref data 3)))))
+               (when (aref data 3) (insert "\n" (aref data 3)))))
 
            (setq ast (org-noter--parse-root))
            (org-noter--narrow-to-root ast)
