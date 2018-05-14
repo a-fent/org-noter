@@ -1017,6 +1017,27 @@ want to kill."
               (set-frame-parameter nil 'name nil))
           (delete-frame frame))))))
 
+;; this is stolen from https://github.com/pinguim06/pdf-tools/commit/22629c746878f4e554d4e530306f3433d594a654
+(defun org-noter-edges-to-region (edges)
+  "Attempt to get 4-entry region \(LEFT TOP RIGHT BOTTOM\) from several edges.
+We need this to import annotations and to get marked-up text, because annotations
+are referenced by its edges, but functions for these tasks need region."
+
+  (let ((left0 (nth 0 (car edges)))
+        (top0 (nth 1 (car edges)))
+        (bottom0 (nth 3 (car edges)))
+        (top1 (nth 1 (car (last edges))))
+        (right1 (nth 2 (car (last edges))))
+        (bottom1 (nth 3 (car (last edges))))
+        (n (safe-length edges)))
+    ;; we try to guess the line height to move
+    ;; the region away from the boundary and
+    ;; avoid double lines
+    (list left0
+          (+ top0 (/ (- bottom0 top0) 2))
+          right1
+          (- bottom1 (/ (- bottom1 top1) 2 )))))
+
 (defun org-noter-create-skeleton ()
   "Create notes skeleton with the PDF outline or annotations.
 Only available with PDF Tools."
@@ -1073,7 +1094,7 @@ Only available with PDF Tools."
                                     ((eq type 'strike-out) "Strikeout")
                                     ((eq type 'link) "Link")))
                    (if (eq type 'highlight)
-                       (progn (setq real-edges (pdf-annot-edges-to-region (alist-get 'markup-edges item)))
+                       (progn (setq real-edges (org-noter-edges-to-region (alist-get 'markup-edges item)))
                               (setq text (or (assoc-default 'subject item) (assoc-default 'content item)
                                              (replace-regexp-in-string "-?\n"
                                                                        (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
