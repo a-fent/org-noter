@@ -1078,7 +1078,7 @@ Only available with PDF Tools."
                                              (replace-regexp-in-string "-?\n"
                                                                        (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
                                                                        (pdf-info-gettext page real-edges))))
-                              (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2 (format "%s" text))
+                              (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2 text)
                                     output-data))
                      (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2)
                            output-data))))))
