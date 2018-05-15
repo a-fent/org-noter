@@ -142,6 +142,9 @@ When nil, it will use the selected frame if it does not belong to any other sess
   frame doc-buffer notes-buffer ast modified-tick doc-mode display-name notes-file-path property-text
   level num-notes-in-view window-behavior window-location auto-save-last-location hide-other)
 
+(defvar org-noter--site-directory (file-name-directory load-file-name)
+  "The directory where all of the org-noter files are located.")
+
 (defvar org-noter--sessions nil
   "List of `org-noter' sessions.")
 
@@ -1130,7 +1133,26 @@ Only available with PDF Tools."
              (when (aref data 1)
                (org-entry-put
                 nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))
-               (when (= (length data) 4) (insert "\n" (aref data 3)) (fill-paragraph))))
+
+               (when (= (length data) 4)
+                 (let ((text (aref data 3))
+                       (img-dir (org-download--dir))
+                       (cmd (expand-file-name "get_pdf_images.sh" org-noter--site-directory))
+                       (doc (org-entry-get nil org-noter-property-doc-file t))
+                       num ext)
+                   (if (and (string-match "^fig[. ]+\\([0-9]+\\)[. ]+" text)
+                            (string= "0" (call-process-shell-command
+                                          (format "cd %s && %s %s"
+                                                  (shell-quote-argument img-dir)
+                                                  (shell-quote-argument cmd)
+                                                  (shell-quote-argument doc))))
+                            (setq ext (file-name-extension (car (directory-files "./raw" nil "fig-[0-9]+\\.")))))
+                       (progn
+                         (setq num (string-to-int (match-string 1 text)))
+                         (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
+                         (insert (format "[[file:%s/fig-%03ds.%s]]" img-dir (1+ num) ext)))
+                     (insert "\n" text)
+                     (fill-paragraph))))))
 
            (setq ast (org-noter--parse-root))
            (org-noter--narrow-to-root ast)
