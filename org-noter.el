@@ -122,6 +122,11 @@ When nil, it will use the selected frame if it does not belong to any other sess
   :group 'org-noter
   :type 'list)
 
+(defcustom org-noter-figure-caption-regexp "^fig[. ]+\\([0-9]+\\)[. ]+"
+  "Regexp to match figure caption in the doc."
+  :group 'org-noter
+  :type 'string)
+
 (defface org-noter-no-notes-exist-face
   '((t
      :foreground "chocolate"
@@ -1140,7 +1145,7 @@ Only available with PDF Tools."
                        (cmd (expand-file-name "get_pdf_images.sh" org-noter--site-directory))
                        (doc (org-entry-get nil org-noter-property-doc-file t))
                        num ext)
-                   (if (and (string-match "^fig[. ]+\\([0-9]+\\)[. ]+" text)
+                   (if (and (string-match org-noter-figure-caption-regexp text)
                             (string= "0" (call-process-shell-command
                                           (format "cd %s && %s %s"
                                                   (shell-quote-argument img-dir)
