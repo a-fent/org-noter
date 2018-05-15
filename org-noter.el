@@ -1147,11 +1147,11 @@ Only available with PDF Tools."
                        (doc (org-entry-get nil org-noter-property-doc-file t))
                        num ext)
                    (if (and (string-match org-noter-figure-caption-regexp text)
-                            (string= "0" (call-process-shell-command
-                                          (format "cd %s && %s %s"
-                                                  (shell-quote-argument img-dir)
-                                                  (shell-quote-argument cmd)
-                                                  (shell-quote-argument doc))))
+                            (eq 0 (call-process-shell-command
+                                   (format "cd %s && %s %s"
+                                           (shell-quote-argument img-dir)
+                                           (shell-quote-argument cmd)
+                                           (shell-quote-argument doc))))
                             (setq ext (file-name-extension (car (directory-files "./raw" nil "fig-[0-9]+\\.")))))
                        (progn
                          (setq num (string-to-int (match-string 1 text)))
