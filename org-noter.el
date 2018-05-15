@@ -1152,11 +1152,11 @@ Only available with PDF Tools."
                                            (shell-quote-argument img-dir)
                                            (shell-quote-argument cmd)
                                            (shell-quote-argument doc))))
-                            (setq ext (file-name-extension (car (directory-files "./raw" nil "fig-[0-9]+\\.")))))
+                            (setq ext (file-name-extension (car (directory-files (concat img-dir "/raw") nil "fig-[0-9]+\\.")))))
                        (progn
                          (setq num (string-to-int (match-string 1 text)))
                          (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
-                         (insert (format "[[file:%s/fig-%03ds.%s]]" img-dir (1+ num) ext)))
+                         (insert (format "[[file:%s/small/fig-%03ds.%s]]" img-dir (1+ num) ext)))
                      (insert "\n" text)
                      (fill-paragraph))))))
 
