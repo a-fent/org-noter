@@ -1156,7 +1156,13 @@ Only available with PDF Tools."
                        (progn
                          (setq num (string-to-int (match-string 1 text)))
                          (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
-                         (insert (format "[[file:%s/small/fig-%03ds.%s]]" img-dir (1+ num) ext)))
+                         (insert (format "[[file:%s/small/fig-%03ds.%s]]"
+                                         img-dir
+                                         (if (eq 0 (call-process-shell-command
+                                                    (format "pdfgrep elsevier %s" (shell-quote-argument doc))))
+                                             (1+ num)
+                                           (1- num))
+                                         ext)))
                      (insert "\n" text)
                      (fill-paragraph))))))
 
