@@ -1144,26 +1144,31 @@ Only available with PDF Tools."
                  (let ((text (aref data 3))
                        (img-dir (org-download--dir))
                        (cmd (expand-file-name "get_pdf_images.sh" org-noter--site-directory))
-                       (doc (org-entry-get nil org-noter-property-doc-file t))
-                       ext)
+                       (doc (org-entry-get nil org-noter-property-doc-file t)))
+
                    (if (and (string-match org-noter-figure-caption-regexp text)
                             (eq 0 (call-process-shell-command
                                    (format "cd %s && %s %s"
                                            (shell-quote-argument img-dir)
                                            (shell-quote-argument cmd)
-                                           (shell-quote-argument doc))))
-                            (setq ext (file-name-extension (car (directory-files (concat img-dir "/raw") nil "fig-[0-9]+\\.")))))
+                                           (shell-quote-argument doc)))))
 
                        (let* ((elsevier-p (eq 0 (call-process-shell-command
                                                  (format "pdfgrep elsevier %s"
                                                          (shell-quote-argument doc)))))
                               (old-num (string-to-int (match-string 1 text)))
                               (new-num (if elsevier-p (1+ old-num) (1- old-num)))
-                              (img-file (format "%s/small/fig-%03ds.%s" img-dir new-num ext)))
+                              ;; get file extension of the original file
+                              (ext (ignore-errors
+                                     (file-name-extension
+                                      (car (directory-files (concat img-dir "/raw") nil (format "fig-%03d\\." new-num))))))
+                              img-file)
 
                          (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
                          (cond
-                          ((file-exists-p img-file)
+                          ;; if the raw image exists, then the small image exists
+                          (ext
+                           (setq img-file (format "%s/small/fig-%03ds.%s" img-dir new-num ext))
                            (insert (format "[[file:%s]]" img-file))
                            (org-redisplay-inline-images))
                           (t (user-error "Image file fig-%03ds.%s (Fig. %d) doesn't exist. Please insert manually!"
