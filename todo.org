@@ -1,3 +1,4 @@
 * TODO 研究一下怎样用org-download插入小图
 自动提取的图片会生成小图，但是用org-download插入的图片仍然是原始尺寸。研究一下怎
 样用org-download插入小图。
+* TODO 为提示信息的字体添加颜色
