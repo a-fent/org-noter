@@ -2,3 +2,5 @@
 自动提取的图片会生成小图，但是用org-download插入的图片仍然是原始尺寸。研究一下怎
 样用org-download插入小图。
 * TODO 为提示信息的字体添加颜色
+* TODO 解决Annotation的排序问题（pdf两列布局时）
+* TODO 解决高亮文字提取不完全的问题
