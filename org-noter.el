@@ -1171,8 +1171,8 @@ Only available with PDF Tools."
                            (setq img-file (format "%s/small/fig-%03ds.%s" img-dir new-num ext))
                            (insert (format "[[file:%s]]" img-file))
                            (org-redisplay-inline-images))
-                          (t (user-error "Image file fig-%03ds.%s (Fig. %d) doesn't exist. Please insert manually!"
-                                         new-num ext old-num))))
+                          (t (message "Image file fig-%03ds (Fig. %d) doesn't exist. Please insert manually!"
+                                      new-num old-num))))
 
                      (insert "\n" text)
                      (fill-paragraph))))))
