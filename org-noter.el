@@ -1145,7 +1145,7 @@ Only available with PDF Tools."
                        (img-dir (org-download--dir))
                        (cmd (expand-file-name "get_pdf_images.sh" org-noter--site-directory))
                        (doc (org-entry-get nil org-noter-property-doc-file t))
-                       num ext)
+                       ext)
                    (if (and (string-match org-noter-figure-caption-regexp text)
                             (eq 0 (call-process-shell-command
                                    (format "cd %s && %s %s"
@@ -1153,16 +1153,17 @@ Only available with PDF Tools."
                                            (shell-quote-argument cmd)
                                            (shell-quote-argument doc))))
                             (setq ext (file-name-extension (car (directory-files (concat img-dir "/raw") nil "fig-[0-9]+\\.")))))
-                       (progn
-                         (setq num (string-to-int (match-string 1 text)))
+                       (let* ((num (string-to-int (match-string 1 text)))
+                              (elsevier-p (eq 0 (call-process-shell-command
+                                                 (format "pdfgrep elsevier %s"
+                                                         (shell-quote-argument doc)))))
+                              (img-file (format "%s/small/fig-%03ds.%s" img-dir
+                                                (if elsevier-p (1+ num) (1- num))
+                                                ext)))
                          (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
-                         (insert (format "[[file:%s/small/fig-%03ds.%s]]"
-                                         img-dir
-                                         (if (eq 0 (call-process-shell-command
-                                                    (format "pdfgrep elsevier %s" (shell-quote-argument doc))))
-                                             (1+ num)
-                                           (1- num))
-                                         ext)))
+                         (if (file-exists-p img-file)
+                             (insert (format "[[file:%s]]" img-file))
+                           (message "Image file doesn't exist. Please insert image manually!")))
                      (insert "\n" text)
                      (fill-paragraph))))))
 
