@@ -1043,7 +1043,7 @@ are referenced by its edges, but functions for these tasks need region."
     ;; the region away from the boundary and
     ;; avoid double lines
     (list left0
-          (+ top0 (/ (- bottom0 top0) 2))
+          (+ top0 (/ (- bottom0 top0) 3))
           right1
           (- bottom1 (/ (- bottom1 top1) 2 )))))
 
