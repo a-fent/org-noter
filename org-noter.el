@@ -1153,17 +1153,22 @@ Only available with PDF Tools."
                                            (shell-quote-argument cmd)
                                            (shell-quote-argument doc))))
                             (setq ext (file-name-extension (car (directory-files (concat img-dir "/raw") nil "fig-[0-9]+\\.")))))
-                       (let* ((num (string-to-int (match-string 1 text)))
-                              (elsevier-p (eq 0 (call-process-shell-command
+
+                       (let* ((elsevier-p (eq 0 (call-process-shell-command
                                                  (format "pdfgrep elsevier %s"
                                                          (shell-quote-argument doc)))))
-                              (img-file (format "%s/small/fig-%03ds.%s" img-dir
-                                                (if elsevier-p (1+ num) (1- num))
-                                                ext)))
+                              (old-num (string-to-int (match-string 1 text)))
+                              (new-num (if elsevier-p (1+ old-num) (1- old-num)))
+                              (img-file (format "%s/small/fig-%03ds.%s" img-dir new-num ext)))
+
                          (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
-                         (if (file-exists-p img-file)
-                             (insert (format "[[file:%s]]" img-file))
-                           (message "Image file doesn't exist. Please insert image manually!")))
+                         (cond
+                          ((file-exists-p img-file)
+                           (insert (format "[[file:%s]]" img-file))
+                           (org-redisplay-inline-images))
+                          (t (user-error "Image file fig-%03ds.%s (Fig. %d) doesn't exist. Please insert manually!"
+                                         new-num ext old-num))))
+
                      (insert "\n" text)
                      (fill-paragraph))))))
 
