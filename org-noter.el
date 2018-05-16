@@ -1074,12 +1074,16 @@ want to kill."
           (delete-frame frame))))))
 
 ;; this is stolen from https://github.com/pinguim06/pdf-tools/commit/22629c746878f4e554d4e530306f3433d594a654
-(defun org-noter-edges-to-region (edges)
+(defun org-noter-edges-to-region (edges &optional type)
   "Attempt to get 4-entry region \(LEFT TOP RIGHT BOTTOM\) from several edges.
 We need this to import annotations and to get marked-up text, because annotations
 are referenced by its edges, but functions for these tasks need region."
 
-  (let ((left0 (nth 0 (car edges)))
+  (let ((denorm-list (list '(highlight . (3 . 2))
+                           '(underline . (7 . 2))
+                           '(squiggly . (3 . 2))
+                           '(strike-out . (4 . 2))))
+        (left0 (nth 0 (car edges)))
         (top0 (nth 1 (car edges)))
         (bottom0 (nth 3 (car edges)))
         (top1 (nth 1 (car (last edges))))
@@ -1089,10 +1093,13 @@ are referenced by its edges, but functions for these tasks need region."
     ;; we try to guess the line height to move
     ;; the region away from the boundary and
     ;; avoid double lines
-    (list left0
-          (+ top0 (/ (- bottom0 top0) 3))
-          right1
-          (- bottom1 (/ (- bottom1 top1) 2 )))))
+    (unless type (setq type 'highlight))
+    (let ((d1 (car (cdr (assoc type denorm-list))))
+          (d2 (cdr (cdr (assoc type denorm-list)))))
+      (list left0
+            (+ top0 (/ (- bottom0 top0) d1))
+            right1
+            (- bottom1 (/ (- bottom1 top1) d2))))))
 
 (defun org-noter-create-skeleton ()
   "Create notes skeleton with the PDF outline or annotations.
@@ -1149,15 +1156,19 @@ Only available with PDF Tools."
                                     ((eq type 'text) "Text note")
                                     ((eq type 'strike-out) "Strikeout")
                                     ((eq type 'link) "Link")))
-                   (if (eq type 'highlight)
-                       (progn (setq real-edges (org-noter-edges-to-region (alist-get 'markup-edges item)))
-                              (message "%s" real-edges)
+
+                   ;; (message "%s" type)
+                   (if (memq type '(highlight underline squiggly strike-out))
+                       (progn (setq real-edges (org-noter-edges-to-region (alist-get 'markup-edges item) type))
+                              ;; (message "%s" real-edges)
+
                               (let ((height (- (nth 3 real-edges) (nth 1 real-edges))))
                                 (when (or (null max-height) (< max-height height))
                                   (setq max-height height)
                                   (setq max-height-edges real-edges))
                                 (when (or (null min-height) (> min-height height))
                                   (setq min-height height)))
+
                               (setq text (or (assoc-default 'subject item) (assoc-default 'content item)
                                              (replace-regexp-in-string "-?\n"
                                                                        (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
@@ -1170,7 +1181,6 @@ Only available with PDF Tools."
                      (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2)
                            output-data)))))
 
-             (message "%s" output-data)
              (when output-data
                (push (vector "Annotations" nil 1 two-cols-p) output-data))))))
 
