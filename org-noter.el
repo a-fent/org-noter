@@ -689,6 +689,53 @@ P2 or, when in the same page, if P1 is the _f_irst of the two."
              (and (= (car p1) (car p2))
                   (< (cdr p1) (cdr p2)))))))
 
+(defun org-noter--compare-location-cons-1 (comp p1 p2)
+  "Same as `org-noter--compare-location-cons', except it is used
+for multi columns."
+  (cond ((not p1) nil)
+        ((not p2) t)
+        ((eq comp '<)
+         (or (< (car p1) (car p2))
+             (and (= (car p1) (car p2))
+                  (or (and (< (nth 2 (cdr p1)) 0.5)
+                           (> (nth 0 (cdr p2)) 0.5))
+                      (and (< (nth 2 (cdr p1)) 0.5)
+                           (< (nth 2 (cdr p2)) 0.5)
+                           (< (nth 1 (cdr p1)) (nth 1 (cdr p2))))
+                      (and (> (nth 0 (cdr p1)) 0.5)
+                           (> (nth 0 (cdr p2)) 0.5)
+                           (< (nth 1 (cdr p1)) (nth 1 (cdr p2))))))))
+        ((eq comp '<=)
+         (or (< (car p1) (car p2))
+             (or (and (< (nth 2 (cdr p1)) 0.5)
+                      (> (nth 0 (cdr p2)) 0.5))
+                 (and (< (nth 2 (cdr p1)) 0.5)
+                      (< (nth 2 (cdr p2)) 0.5)
+                      (<= (nth 1 (cdr p1)) (nth 1 (cdr p2))))
+                 (and (> (nth 0 (cdr p1)) 0.5)
+                      (> (nth 0 (cdr p2)) 0.5)
+                      (<= (nth 1 (cdr p1)) (nth 1 (cdr p2)))))))
+        ((eq comp '>)
+         (or (> (car p1) (car p2))
+             (or (and (> (nth 0 (cdr p1)) 0.5)
+                      (< (nth 2 (cdr p2)) 0.5))
+                 (and (< (nth 2 (cdr p1)) 0.5)
+                      (< (nth 2 (cdr p2)) 0.5)
+                      (> (nth 1 (cdr p1)) (nth 1 (cdr p2))))
+                 (and (> (nth 0 (cdr p1)) 0.5)
+                      (> (nth 0 (cdr p2)) 0.5)
+                      (> (nth 1 (cdr p1)) (nth 1 (cdr p2)))))))
+        ((eq comp '>=)
+         (or (> (car p1) (car p2))
+             (or (and (> (nth 0 (cdr p1)) 0.5)
+                      (< (nth 2 (cdr p2)) 0.5))
+                 (and (< (nth 2 (cdr p1)) 0.5)
+                      (< (nth 2 (cdr p2)) 0.5)
+                      (>= (nth 1 (cdr p1)) (nth 1 (cdr p2))))
+                 (and (> (nth 0 (cdr p1)) 0.5)
+                      (> (nth 0 (cdr p2)) 0.5)
+                      (>= (nth 1 (cdr p1)) (nth 1 (cdr p2)))))))))
+
 (defun org-noter--get-this-note-last-element (note)
   (let* ((element-of-different-note
           (org-element-map (org-element-contents note) 'headline
@@ -1078,7 +1125,7 @@ Only available with PDF Tools."
                                         '("Text notes" . text)
                                         '("Strikeouts" . strike-out)
                                         '("Links" . link)))
-                 chosen-annots)
+                 chosen-annots min-height max-height max-height-edges two-cols-p)
              (while (> (length possible-annots) 1)
                (let* ((chosen-string (completing-read "Which types of annotations do you want? "
                                                       possible-annots nil t))
@@ -1104,24 +1151,44 @@ Only available with PDF Tools."
                                     ((eq type 'link) "Link")))
                    (if (eq type 'highlight)
                        (progn (setq real-edges (org-noter-edges-to-region (alist-get 'markup-edges item)))
+                              (message "%s" real-edges)
+                              (let ((height (- (nth 3 real-edges) (nth 1 real-edges))))
+                                (when (or (null max-height) (< max-height height))
+                                  (setq max-height height)
+                                  (setq max-height-edges real-edges))
+                                (when (or (null min-height) (> min-height height))
+                                  (setq min-height height)))
                               (setq text (or (assoc-default 'subject item) (assoc-default 'content item)
                                              (replace-regexp-in-string "-?\n"
                                                                        (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
                                                                        (pdf-info-gettext page real-edges))))
-                              (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2 text)
-                                    output-data))
+                              (push (vector (format "%s on page %d" name page)
+                                            (cons page (nth 1 edges)) 2 text (cons page real-edges))
+                                    output-data)
+                              (setq two-cols-p (and (>= (/ max-height min-height) 2)
+                                                    (< (- (nth 2 max-height-edges) (nth 0 max-height-edges))))))
                      (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2)
-                           output-data))))))
-           (when output-data
-             (push (vector "Annotations" nil 1) output-data)))))
+                           output-data)))))
+
+             (message "%s" output-data)
+             (when output-data
+               (push (vector "Annotations" nil 1 two-cols-p) output-data))))))
 
        (when (string= "Annotations" (aref (car output-data) 0))
-         (setq output-data
-               (sort output-data
-                     (lambda (e1 e2)
-                       (or (not (aref e1 1))
-                           (and (aref e2 1)
-                                (org-noter--compare-location-cons '< (aref e1 1) (aref e2 1))))))))
+         (if (not (aref (car output-data) 3)) ; single column
+             (setq output-data
+                   (sort output-data
+                         (lambda (e1 e2)
+                           (or (not (aref e1 1))
+                               (and (aref e2 1)
+                                    (org-noter--compare-location-cons '< (aref e1 1) (aref e2 1)))))))
+           ;; two columns
+           (setq output-data
+                 (sort output-data
+                       (lambda (e1 e2)
+                         (or (not (aref e1 1))
+                             (and (aref e2 1)
+                                  (org-noter--compare-location-cons-1 '< (aref e1 4) (aref e2 4)))))))))
 
        (with-current-buffer (org-noter--session-notes-buffer session)
          ;; NOTE(nox): org-with-wide-buffer can't be used because we wan't to set the
@@ -1140,7 +1207,7 @@ Only available with PDF Tools."
                (org-entry-put
                 nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))
 
-               (when (= (length data) 4)
+               (when (= (length data) 5)
                  (let ((text (aref data 3))
                        (img-dir (org-download--dir))
                        (cmd (expand-file-name "get_pdf_images.sh" org-noter--site-directory))
