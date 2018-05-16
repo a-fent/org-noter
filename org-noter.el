@@ -1144,7 +1144,7 @@ Only available with PDF Tools."
                  (let ((text (aref data 3))
                        (img-dir (org-download--dir))
                        (cmd (expand-file-name "get_pdf_images.sh" org-noter--site-directory))
-                       (doc (org-entry-get nil org-noter-property-doc-file t)))
+                       (doc (expand-file-name (org-entry-get nil org-noter-property-doc-file t))))
 
                    (if (and (string-match org-noter-figure-caption-regexp text)
                             (eq 0 (call-process-shell-command
