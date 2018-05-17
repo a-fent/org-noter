@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 pdffile=$1
+# 默认从第二页开始提取，因为第一页有时会有logo图等
+frompage=${2:-2}
 
 maxWidth=560
 maxHeight=560
@@ -11,7 +13,7 @@ if [ ! -d raw ]; then
 fi
 
 if [ ! -n "$(ls -A raw)" ]; then
-    pdfimages -all "$pdffile" ./raw/fig
+    pdfimages -f $frompage -all "$pdffile" ./raw/fig
 fi
 
 if [ ! -d small ]; then
