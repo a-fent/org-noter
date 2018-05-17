@@ -1126,7 +1126,8 @@ Only available with PDF Tools."
              (setq output-data (nreverse output-data))
              (push (vector "Outline" nil 1) output-data)))
           (t
-           (let ((possible-annots (list '("Highlights" . highlight)
+           (let ((possible-annots (list '("Markups")
+                                        '("Highlights" . highlight)
                                         '("Underlines" . underline)
                                         '("Squigglies" . squiggly)
                                         '("Text notes" . text)
@@ -1138,7 +1139,10 @@ Only available with PDF Tools."
                                                       possible-annots nil t))
                       (chosen-pair (assoc chosen-string possible-annots)))
                  (if (not (cdr chosen-pair))
-                     (setq possible-annots nil)
+                     (progn
+                       (when (string= (car chosen-pair) "Markups")
+                         (setq chosen-annots '(highlight underline squiggly strike-out)))
+                       (setq possible-annots nil))
                    (push (cdr chosen-pair) chosen-annots)
                    (setq possible-annots (delq chosen-pair possible-annots))
                    (when (= 1 (length chosen-annots)) (push '("DONE") possible-annots)))))
