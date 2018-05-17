@@ -123,7 +123,8 @@ When nil, it will use the selected frame if it does not belong to any other sess
   :group 'org-noter
   :type 'list)
 
-(defcustom org-noter-figure-caption-regexp "^fig[. ]+\\([0-9]+\\)[. ]+"
+(defcustom org-noter-figure-caption-regexp
+  "^fig\\(?:ure\\)?[. ]+\\([0-9]+\\)\\(?:: \\|\\. \\|\\.\\([0-9]+\\) \\| \\)"
   "Regexp to match figure caption in the doc."
   :group 'org-noter
   :type 'string)
