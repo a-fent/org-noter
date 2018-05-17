@@ -2,8 +2,8 @@
 
 pdffile=$1
 
-maxWidth=640
-maxHeight=640
+maxWidth=560
+maxHeight=560
 
 
 if [ ! -d raw ]; then
