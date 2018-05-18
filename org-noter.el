@@ -1170,7 +1170,7 @@ Only available with PDF Tools."
                                     ((eq type 'underline) "词句")
                                     ((eq type 'squiggly) "难点")
                                     ((eq type 'text) "批注")
-                                    ((eq type 'strike-out) "质疑")
+                                    ((eq type 'strike-out) "疑点")
                                     ((eq type 'link) "链接")))
 
                    (if (memq type '(highlight underline squiggly strike-out))
