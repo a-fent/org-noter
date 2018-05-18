@@ -1102,6 +1102,17 @@ are referenced by its edges, but functions for these tasks need region."
             right1
             (- bottom1 (/ (- bottom1 top1) d2))))))
 
+(defun pdf-info-two-columns-p (&optional page)
+  "Determine if the layout of PAGE is two-column. If no PAGE is
+given, determine through the middle page of the PDF."
+  (let ((page (or page (1+ (/ (pdf-info-number-of-pages) 2)))))
+    (catch 'p
+      (dolist (item (pdf-info-textregions page))
+        (when (and (> (nth 2 item) 0.5)
+                   (> (nth 0 item) 0.5)
+                   (< (/ (- (nth 0 item) 0.5) (- (nth 2 item) 0.5)) 0.1))
+          (throw 'p t))))))
+
 (defun org-noter-create-skeleton ()
   "Create notes skeleton with the PDF outline or annotations.
 Only available with PDF Tools."
@@ -1134,7 +1145,7 @@ Only available with PDF Tools."
                                         '("Text notes" . text)
                                         '("Strikeouts" . strike-out)
                                         '("Links" . link)))
-                 chosen-annots min-height max-height max-height-edges two-cols-p)
+                 chosen-annots)
              (while (> (length possible-annots) 1)
                (let* ((chosen-string (completing-read "Which types of annotations do you want? "
                                                       possible-annots nil t))
@@ -1162,32 +1173,20 @@ Only available with PDF Tools."
                                     ((eq type 'strike-out) "质疑")
                                     ((eq type 'link) "链接")))
 
-                   ;; (message "%s" type)
                    (if (memq type '(highlight underline squiggly strike-out))
                        (progn (setq real-edges (org-noter-edges-to-region (alist-get 'markup-edges item) type))
-                              ;; (message "%s" real-edges)
-
-                              (let ((height (- (nth 3 real-edges) (nth 1 real-edges))))
-                                (when (or (null max-height) (< max-height height))
-                                  (setq max-height height)
-                                  (setq max-height-edges real-edges))
-                                (when (or (null min-height) (> min-height height))
-                                  (setq min-height height)))
-
-                              (setq text (or (assoc-default 'subject item) (assoc-default 'content item)
+                              (setq text (or (assoc-default 'subject item) (assoc-default 'contents item)
                                              (replace-regexp-in-string "-?\n"
                                                                        (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
                                                                        (pdf-info-gettext page real-edges))))
                               (push (vector (format "%s on page %d" name page)
                                             (cons page (nth 1 edges)) 2 text (cons page real-edges))
-                                    output-data)
-                              (setq two-cols-p (and (>= (/ max-height min-height) 2)
-                                                    (< (- (nth 2 max-height-edges) (nth 0 max-height-edges))))))
+                                    output-data))
                      (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2)
-                           output-data)))))
+                           output-data))))))
 
-             (when output-data
-               (push (vector "Annotations" nil 1 two-cols-p) output-data))))))
+           (when output-data
+             (push (vector "Annotations" nil 1 (pdf-info-two-columns-p)) output-data)))))
 
        (when (string= "Annotations" (aref (car output-data) 0))
          (if (not (aref (car output-data) 3)) ; single column
