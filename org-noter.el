@@ -1235,11 +1235,8 @@ Only available with PDF Tools."
                                            (shell-quote-argument cmd)
                                            (shell-quote-argument doc)))))
 
-                       (let* ((elsevier-p (eq 0 (call-process-shell-command
-                                                 (format "pdfgrep elsevier %s"
-                                                         (shell-quote-argument doc)))))
-                              (old-num (string-to-int (match-string 1 text)))
-                              (new-num (if elsevier-p (1+ old-num) (1- old-num)))
+                       (let* ((old-num (string-to-int (match-string 1 text)))
+                              (new-num (1- old-num))
                               ;; get file extension of the original file
                               (ext (ignore-errors
                                      (file-name-extension
