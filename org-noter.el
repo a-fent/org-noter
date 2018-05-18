@@ -1211,7 +1211,7 @@ Only available with PDF Tools."
                      (page  (alist-get 'page item))
                      (edges (or (car (alist-get 'markup-edges item))
                                 (alist-get 'edges item)))
-                     name real-edges text)
+                     name real-edges text contents)
                  (when (and (memq type chosen-annots) (> page 0))
                    (setq name (cond ((eq type 'highlight) "重点")
                                     ((eq type 'underline) "词句")
@@ -1222,7 +1222,8 @@ Only available with PDF Tools."
 
                    (if (memq type '(highlight underline squiggly strike-out))
                        (progn (setq real-edges (org-noter-edges-to-region (alist-get 'markup-edges item) type))
-                              (setq text (or (assoc-default 'subject item) (assoc-default 'contents item)
+                              (setq text (or (assoc-default 'subject item)
+                                             (when (not (s-blank-str? (setq contents (assoc-default 'contents item)))) contents)
                                              (replace-regexp-in-string "-?\n"
                                                                        (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
                                                                        (pdf-info-gettext page real-edges))))
