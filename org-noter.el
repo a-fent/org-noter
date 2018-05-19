@@ -35,6 +35,8 @@
 ;; https://github.com/rudolfochrist/interleave
 
 ;;; Code:
+(require 's)
+(require 'dash)
 (require 'org)
 (require 'org-element)
 (require 'org-download)
