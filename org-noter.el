@@ -1132,7 +1132,8 @@ are referenced by its edges, but functions for these tasks need region."
   (let ((denorm-list (list '(highlight . (3 . 2))
                            '(underline . (7 . 2))
                            '(squiggly . (3 . 2))
-                           '(strike-out . (4 . 2))))
+                           '(strike-out . (4 . 2))
+                           '(extra . (5 . 5))))
         (left0 (nth 0 (car edges)))
         (top0 (nth 1 (car edges)))
         (bottom0 (nth 3 (car edges)))
@@ -1213,7 +1214,7 @@ Only available with PDF Tools."
                      (page  (alist-get 'page item))
                      (edges (or (car (alist-get 'markup-edges item))
                                 (alist-get 'edges item)))
-                     name real-edges text contents)
+                     name text cont)
                  (when (and (memq type chosen-annots) (> page 0))
                    (setq name (cond ((eq type 'highlight) "重点")
                                     ((eq type 'underline) "词句")
@@ -1223,15 +1224,46 @@ Only available with PDF Tools."
                                     ((eq type 'link) "链接")))
 
                    (if (memq type '(highlight underline squiggly strike-out))
-                       (progn (setq real-edges (org-noter-edges-to-region (alist-get 'markup-edges item) type))
-                              (setq text (or (assoc-default 'subject item)
-                                             (when (not (s-blank-str? (setq contents (assoc-default 'contents item)))) contents)
-                                             (replace-regexp-in-string "-?\n"
-                                                                       (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
-                                                                       (pdf-info-gettext page real-edges))))
-                              (push (vector (format "%s on page %d" name page)
-                                            (cons page (nth 1 edges)) 2 text (cons page real-edges))
-                                    output-data))
+                       (let* ((medges (alist-get 'markup-edges item))
+                              (len (length medges))
+                              real-edges groups group)
+
+                         (dotimes (i len groups)
+                           (push (nth i medges) group)
+                           (when (or (= i (1- len))
+                                     (not (= (nth 3 (nth i medges))
+                                             (nth 1 (nth (1+ i) medges)))))
+                             (push (nreverse group) groups)
+                             (setq group nil)))
+
+                         (cond ((= 1 (length groups))
+                                (setq real-edges (org-noter-edges-to-region medges type)
+                                      text (or (assoc-default 'subject item)
+                                               (when (not (s-blank-str? (setq cont (assoc-default 'contents item)))) cont)
+                                               (replace-regexp-in-string "-?\n"
+                                                                         (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
+                                                                         (pdf-info-gettext page real-edges)))))
+                               (t
+                                (let ((sorted-list (sort
+                                                    (mapcar (lambda (e) (org-noter-edges-to-region e 'extra)) groups)
+                                                    (lambda (e1 e2)
+                                                      (or (not e1)
+                                                          (and e2 (org-noter--compare-location-cons-2 '< e1 e2)))))))
+                                  (setq real-edges (car sorted-list)
+                                        text (or (assoc-default 'subject item)
+                                                 (when (not (s-blank-str? (setq cont (assoc-default 'contents item)))) cont)
+                                                 (mapconcat
+                                                  (lambda (e)
+                                                    (concat "- "
+                                                            (replace-regexp-in-string
+                                                             "-?\n"
+                                                             (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
+                                                             (pdf-info-gettext page e))))
+                                                  sorted-list
+                                                  "\n"))))))
+                         (push (vector (format "%s on page %d" name page)
+                                       (cons page (nth 1 edges)) 2 text (cons page real-edges))
+                               output-data))
                      (setq text (assoc-default 'contents item))
                      (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2 text)
                            output-data))))))

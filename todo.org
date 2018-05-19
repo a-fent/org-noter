@@ -12,57 +12,7 @@ CLOSED: [2018-05-17 Thu 04:47]
 * TODO pdfimages提取的图片有时色调会改变，调查原因并找到解决办法
 * TODO 解决混合layout下的annotation的排序
 比如第一页中摘要横跨两列
-* TODO 提取text annotation的内容，看看link annotation能用来做什么
-* TODO 按住Ctrl选择可以一次高亮多个部分并作为一个annotation，怎样处理这类文字提取？
-#+BEGIN_SRC emacs-lisp
-(defun my-read-markup-region (region page buffer)
-  (pdf-info-gettext page (org-noter-edges-to-region (list region)) nil buffer))
-
-(defun my-read-markup-region-1 (region page buffer)
-  (pdf-info-gettext page (org-noter-edges-to-region region 'highlight) nil buffer))
-
-(let* ((buff (get-buffer "Field Monitoring of Roller Vibration during Compaction of Subgrade Soil"))
-       (page 2)
-       (annots (pdf-info-getannots page buff))
-       (annotA (car annots))
-       (annotB (cadr annots))
-       (edgesA (pdf-annot-get annotA 'markup-edges))
-       ;; (edgesB (pdf-annot-get annotB 'markup-edges))
-       (regionA (org-noter-edges-to-region edgesA))
-       ;; (regionB (org-noter-edges-to-region edgesB))
-       breaks)
-
-  ;; (message "%s" (pdf-annot-get annotA 'markup-edges ))
-  ;; (my-read-markup-region-1 edgesA page buff)
-  ;; (message "%s" (pdf-annot-get annotB 'markup-edges ))
-  ;; (message "%s" (pdf-annot-get-display-edges annotA))
-
-  ;; (= (nth 3 (car edgesB)) (nth 1 (cadr edgesB)))
-
-  (sort
-   ;; (mapcar (lambda (e) (cons 2 (org-noter-edges-to-region e)))
-   (mapcar #'org-noter-edges-to-region
-           (let (lst sub)
-             (dotimes (n (length edgesA) lst)
-               (push (nth n edgesA) sub)
-               (when (or (= (1- (length edgesA)) n)
-                         (not (= (nth 3 (nth n edgesA)) (nth 1 (nth (1+ n) edgesA)))))
-                 (push (nreverse sub) lst)
-                 (setq sub nil)))))
-   (lambda (e1 e2)
-     (org-noter--compare-location-cons-2 '< e1 e2)))
-
-  ;; (message "%s" annotA)
-  ;; (message "%s" annotB)
-  ;; (pdf-annot-compare-annotations annotA annotB)
-  ;; (org-noter--compare-location-cons-1 '< regionA regionB)
-
-  ;; (mapcar (lambda (e) (my-read-markup-region e page buff)) edgesA)
-  ;; (mapcar (lambda (e) (pdf-info-gettext page e nil buff)) (pdf-util-scale edgesA '(0.9 . 1)))
-  ;; (my-read-markup-region-1 edgesA page buff)
-  ;; (my-read-markup-region-1 (pdf-annot-get-display-edges annotA) page buff)
-
-  ;; (message "%s" edgesA)
-  )
-
-#+END_SRC
+* DONE 提取text annotation的内容
+CLOSED: [2018-05-19 Sat 14:22]
+* DONE 按住Ctrl选择可以一次高亮多个部分并作为一个annotation，怎样处理这类文字提取？
+CLOSED: [2018-05-19 Sat 14:22]
