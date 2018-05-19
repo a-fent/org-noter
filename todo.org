@@ -9,7 +9,8 @@ CLOSED: [2018-05-17 Thu 04:47]
 * TODO 针对每个PDF文档控制提取图片的大小
 * TODO 增加一个org属性指定开始提取图片的页码
 * TODO 解决带章节编号的图标题与图片文件名序号之间的对应关系
-* TODO pdfimages提取的图片有时色调会改变，调查原因并找到解决办法
+* DONE pdfimages提取的图片有时色调会改变，调查原因并找到解决办法
+CLOSED: [2018-05-20 Sun 11:49]
 * TODO 解决混合layout下的annotation的排序
 比如第一页中摘要横跨两列
 * DONE 提取text annotation的内容
