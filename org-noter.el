@@ -1231,8 +1231,9 @@ Only available with PDF Tools."
                          (dotimes (i len groups)
                            (push (nth i medges) group)
                            (when (or (= i (1- len))
-                                     (not (= (nth 3 (nth i medges))
-                                             (nth 1 (nth (1+ i) medges)))))
+                                     (>= (abs (- (nth 3 (nth i medges))
+                                                 (nth 1 (nth (1+ i) medges))))
+                                         0.0015))
                              (push (nreverse group) groups)
                              (setq group nil)))
 
