@@ -1200,7 +1200,7 @@ Only available with PDF Tools."
                  (if (not (cdr chosen-pair))
                      (progn
                        (when (string= (car chosen-pair) "Markups")
-                         (setq chosen-annots '(highlight underline squiggly strike-out)))
+                         (setq chosen-annots '(highlight underline squiggly strike-out text)))
                        (setq possible-annots nil))
                    (push (cdr chosen-pair) chosen-annots)
                    (setq possible-annots (delq chosen-pair possible-annots))
@@ -1230,7 +1230,8 @@ Only available with PDF Tools."
                               (push (vector (format "%s on page %d" name page)
                                             (cons page (nth 1 edges)) 2 text (cons page real-edges))
                                     output-data))
-                     (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2)
+                     (setq text (assoc-default 'contents item))
+                     (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2 text)
                            output-data))))))
 
            (when output-data
@@ -1245,12 +1246,20 @@ Only available with PDF Tools."
                                (and (aref e2 1)
                                     (org-noter--compare-location-cons '< (aref e1 1) (aref e2 1)))))))
            ;; two columns
-           (setq output-data
-                 (sort output-data
-                       (lambda (e1 e2)
-                         (or (not (aref e1 1))
-                             (and (aref e2 1)
-                                  (org-noter--compare-location-cons-1 '< (aref e1 4) (aref e2 4)))))))))
+           (let* ((gp (--group-by (string= "批注" (car (s-split-words (aref it 0)))) output-data))
+                  (l1 (assoc-default nil gp))
+                  (l2 (assoc-default t gp)))
+             (setq output-data
+                   (-concat (sort l1
+                                  (lambda (e1 e2)
+                                    (or (not (aref e1 1))
+                                        (and (aref e2 1)
+                                             (org-noter--compare-location-cons-1 '< (aref e1 4) (aref e2 4))))))
+                            (sort l2
+                                  (lambda (e1 e2)
+                                    (or (not (aref e1 1))
+                                        (and (aref e2 1)
+                                             (org-noter--compare-location-cons '< (aref e1 1) (aref e2 1)))))))))))
 
        (with-current-buffer (org-noter--session-notes-buffer session)
          ;; NOTE(nox): org-with-wide-buffer can't be used because we wan't to set the
@@ -1269,39 +1278,43 @@ Only available with PDF Tools."
                (org-entry-put
                 nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))
 
-               (when (= (length data) 5)
-                 (let ((text (aref data 3))
-                       (img-dir (org-download--dir))
-                       (cmd (expand-file-name "get_pdf_images.sh" org-noter--site-directory))
-                       (doc (expand-file-name (org-entry-get nil org-noter-property-doc-file t))))
+               (cond ((= (length data) 5)
+                      (let ((text (aref data 3))
+                            (img-dir (org-download--dir))
+                            (cmd (expand-file-name "get_pdf_images.sh" org-noter--site-directory))
+                            (doc (expand-file-name (org-entry-get nil org-noter-property-doc-file t))))
 
-                   (if (and (string-match org-noter-figure-caption-regexp text)
-                            (eq 0 (call-process-shell-command
-                                   (format "cd %s && %s %s"
-                                           (shell-quote-argument img-dir)
-                                           (shell-quote-argument cmd)
-                                           (shell-quote-argument doc)))))
+                        (if (and (string-match org-noter-figure-caption-regexp text)
+                                 (eq 0 (call-process-shell-command
+                                        (format "cd %s && %s %s"
+                                                (shell-quote-argument img-dir)
+                                                (shell-quote-argument cmd)
+                                                (shell-quote-argument doc)))))
 
-                       (let* ((old-num (string-to-int (match-string 1 text)))
-                              (new-num (1- old-num))
-                              ;; get file extension of the original file
-                              (ext (ignore-errors
-                                     (file-name-extension
-                                      (car (directory-files (concat img-dir "/raw") nil (format "fig-%03d\\." new-num))))))
-                              img-file)
+                            (let* ((old-num (string-to-int (match-string 1 text)))
+                                   (new-num (1- old-num))
+                                   ;; get file extension of the original file
+                                   (ext (ignore-errors
+                                          (file-name-extension
+                                           (car (directory-files (concat img-dir "/raw") nil (format "fig-%03d\\." new-num))))))
+                                   img-file)
 
-                         (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
-                         (cond
-                          ;; if the raw image exists, then the small image exists
-                          (ext
-                           (setq img-file (format "%s/small/fig-%03ds.%s" img-dir new-num ext))
-                           (insert (format "[[file:%s]]" img-file))
-                           (org-redisplay-inline-images))
-                          (t (message "Image file fig-%03ds (Fig. %d) doesn't exist. Please insert manually!"
-                                      new-num old-num))))
+                              (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
+                              (cond
+                               ;; if the raw image exists, then the small image exists
+                               (ext
+                                (setq img-file (format "%s/small/fig-%03ds.%s" img-dir new-num ext))
+                                (insert (format "[[file:%s]]" img-file))
+                                (org-redisplay-inline-images))
+                               (t (message "Image file fig-%03ds (Fig. %d) doesn't exist. Please insert manually!"
+                                           new-num old-num))))
 
-                     (insert "\n" text)
-                     (fill-paragraph))))))
+                          (insert "\n" text)
+                          (fill-paragraph))))
+
+                     ((= (length data) 4)
+                      (insert "\n" (aref data 3))
+                      (fill-paragraph)))))
 
            (setq ast (org-noter--parse-root))
            (org-noter--narrow-to-root ast)
