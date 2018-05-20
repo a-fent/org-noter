@@ -15,7 +15,10 @@ def parseArguments():
 
     parser.add_argument(
         "pdfFile", help="PDF file whose meta needs to be changed.", type=str)
+
     parser.add_argument(
+        # "-n",
+        # "--notesFile",
         "notesFile",
         help="Note file path that is to be added as metadata.",
         type=str)
@@ -30,6 +33,12 @@ def parseArguments():
         '-a',
         '--add',
         help="Add the notes file to existing list",
+        action='store_true')
+
+    parser.add_argument(
+        '-r',
+        '--remove',
+        help="Remove the metadata entry.",
         action='store_true')
 
     args = parser.parse_args()
@@ -65,7 +74,12 @@ if __name__ == '__main__':
 
     trailer = PdfReader(inpfn)
 
-    if not trailer.Info.NotesFile or args.force:
+    if args.remove:
+        trailer.Info.pop('/NotesFile')
+        PdfWriter(outfn, trailer=trailer).write()
+        os.rename(outfn, inpfn)
+
+    elif not trailer.Info.NotesFile or args.force:
         trailer.Info.NotesFile = args.notesFile
         PdfWriter(outfn, trailer=trailer).write()
         os.rename(outfn, inpfn)
