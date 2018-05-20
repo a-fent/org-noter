@@ -12,4 +12,4 @@
 # Undo-tree save-files
 *.~undo-tree
 
-test.el
+test*
