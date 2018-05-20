@@ -1658,6 +1658,13 @@ notes file, even if it finds one."
                                   document-path))
         (org-entry-put nil org-noter-property-doc-file document-property))
 
+      (call-process-shell-command
+       (format "%s -a %s %s"
+               (expand-file-name "change_meta.py" org-noter--site-directory)
+               (shell-quote-argument document-property)
+               (shell-quote-argument (file-relative-name notes-file-path
+                                                         (file-name-directory document-property)))))
+
       (setq ast (org-noter--parse-root (current-buffer) document-property))
       (when (catch 'should-continue
               (when (or (numberp arg) (eq arg '-))
