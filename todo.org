@@ -20,3 +20,4 @@ CLOSED: [2018-05-19 Sat 14:22]
 * TODO 增加一种提取方式：Outlines+Annotations
 * DONE 改进pdf打开note的方法：使用metadata
 CLOSED: [2018-05-20 Sun 21:47]
+* TODO 从org-zotxt-noter进入时，如果已有文档路径，则不会插入zotero链接
