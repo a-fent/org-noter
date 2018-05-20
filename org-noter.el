@@ -1709,8 +1709,8 @@ notes file, even if it finds one."
                                      (not (string= "None" reading-results)))
                             (s-split ":" reading-results t)))
              (document-title (s-chomp (shell-command-to-string (concat read-cmd " " "Title"))))
-             (write-cmd (format "%s %s"
-                                (expand-file-name "change_meta.py -a" org-noter--site-directory)
+             (write-cmd (format "%s -a %s"
+                                (expand-file-name "change_meta.py" org-noter--site-directory)
                                 (shell-quote-argument document-name)))
              notes-files-with-heading)
 
