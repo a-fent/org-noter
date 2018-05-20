@@ -18,3 +18,5 @@ CLOSED: [2018-05-19 Sat 14:22]
 * DONE 按住Ctrl选择可以一次高亮多个部分并作为一个annotation，怎样处理这类文字提取？
 CLOSED: [2018-05-19 Sat 14:22]
 * TODO 增加一种提取方式：Outlines+Annotations
+* DONE 改进pdf打开note的方法：使用metadata
+CLOSED: [2018-05-20 Sun 21:47]

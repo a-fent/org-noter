@@ -1690,8 +1690,87 @@ notes file, even if it finds one."
               t)
         (org-noter--create-session ast document-property notes-file-path))))
 
+   ((eq major-mode 'pdf-view-mode)
+    (if (org-noter--valid-session org-noter--session)
+        (progn (org-noter--setup-windows org-noter--session)
+               (select-frame-set-input-focus (org-noter--session-frame org-noter--session)))
+
+      (let* ((document-name buffer-file-name)
+             (document-non-directory (file-name-nondirectory document-name))
+             (document-directory (file-name-directory document-name))
+             (document-base (file-name-base document-name))
+             (document-location (org-noter--doc-approx-location 'infer))
+             (name-candidates (append org-noter-default-notes-file-names (list (concat document-base ".org"))))
+             (read-cmd (format "%s %s"
+                               (expand-file-name "read_meta.py" org-noter--site-directory)
+                               (shell-quote-argument document-name)))
+             (reading-results (s-chomp (shell-command-to-string (concat read-cmd " " "NotesFile"))))
+             (notes-files (when (and (not (s-blank-str? reading-results))
+                                     (not (string= "None" reading-results)))
+                            (s-split ":" reading-results t)))
+             (document-title (s-chomp (shell-command-to-string (concat read-cmd " " "Title"))))
+             (write-cmd (format "%s %s"
+                                (expand-file-name "change_meta.py -a" org-noter--site-directory)
+                                (shell-quote-argument document-name)))
+             notes-files-with-heading)
+
+        (dolist (file notes-files)
+          (with-temp-buffer
+            (insert-file-contents file)
+            (catch 'break
+              (while (re-search-forward (org-re-property org-noter-property-doc-file) nil t)
+                (when (string= (expand-file-name (match-string 3) directory) document-name)
+                  (push file notes-files-with-heading)
+                  (throw 'break t))))))
+
+        (when (or arg (not notes-files-with-heading))
+          (when (or arg (not notes-files))
+            (setq name-candidates (nreverse name-candidates))
+            (let* ((notes-file-name (completing-read "What name do you want the notes to have? "
+                                                     name-candidates nil nil))
+                   (directory (locate-dominating-file default-directory notes-file-name))
+                   target)
+              (when (not directory)
+                (setq directory
+                      (expand-file-name (read-directory-name "Where do you want to save the notes file? "
+                                                             nil nil t))))
+              (setq target (expand-file-name notes-file-name directory)
+                    notes-files (list target))
+              (unless (file-exists-p target) (write-region "" nil target))
+              (call-process-shell-command (concat write-cmd " " (file-relative-name target)))))
+
+          (when (> (length notes-files) 1)
+            (setq notes-files (list (completing-read "In which notes file should we create the heading? "
+                                                     notes-files nil t))))
+
+          (if (member (car notes-files) notes-files-with-heading)
+              ;; NOTE(nox): This is needed in order to override with the arg
+              (setq notes-files-with-heading notes-files)
+            (with-current-buffer (find-file-noselect (car notes-files))
+              (goto-char (point-max))
+              (insert (if (save-excursion (beginning-of-line) (looking-at "[[:space:]]*$")) "" "\n")
+                      "* " (if (or (s-blank-str? document-title)
+                                   (string= "None" document-title))
+                               document-base
+                             document-title))
+              (org-entry-put nil org-noter-property-doc-file
+                             (file-relative-name document-name (file-name-directory (car notes-files)))))
+            (setq notes-files-with-heading notes-files)))
+
+        (with-current-buffer (find-file-noselect (car notes-files-with-heading))
+          (org-with-wide-buffer
+           (catch 'break
+             (goto-char (point-min))
+             (while (re-search-forward (org-re-property org-noter-property-doc-file) nil t)
+               (when (string= (expand-file-name (match-string 3)
+                                                (file-name-directory (car notes-files-with-heading)))
+                              document-name)
+                 (let ((org-noter--start-location-override document-location))
+                   (org-noter))
+                 (throw 'break t)))))))))
+
    ;; NOTE(nox): Creating the session from the document
-   ((memq major-mode '(doc-view-mode pdf-view-mode nov-mode))
+   ((memq major-mode '(doc-view-mode nov-mode))
     (if (org-noter--valid-session org-noter--session)
         (progn (org-noter--setup-windows org-noter--session)
                (select-frame-set-input-focus (org-noter--session-frame org-noter--session)))
