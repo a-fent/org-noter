@@ -1709,17 +1709,11 @@ notes file, even if it finds one."
              (document-base (file-name-base document-name))
              (document-location (org-noter--doc-approx-location 'infer))
              (name-candidates (append org-noter-default-notes-file-names (list (concat document-base ".org"))))
-             (read-cmd (format "%s %s"
-                               (expand-file-name "read_meta.py" org-noter--site-directory)
-                               (shell-quote-argument document-name)))
-             (reading-results (s-chomp (shell-command-to-string (concat read-cmd " " "NotesFile"))))
+             (reading-results (org-noter-utils-read-pdf-meta "NotesFile"))
              (notes-files (when (and (not (s-blank-str? reading-results))
                                      (not (string= "None" reading-results)))
                             (s-split ":" reading-results t)))
-             (document-title (s-chomp (shell-command-to-string (concat read-cmd " " "Title"))))
-             (write-cmd (format "%s -a %s"
-                                (expand-file-name "change_meta.py" org-noter--site-directory)
-                                (shell-quote-argument document-name)))
+             (document-title (org-noter-utils-read-pdf-meta "Title"))
              notes-files-with-heading)
 
         (dolist (file notes-files)
@@ -1745,7 +1739,7 @@ notes file, even if it finds one."
               (setq target (expand-file-name notes-file-name directory)
                     notes-files (list target))
               (unless (file-exists-p target) (write-region "" nil target))
-              (call-process-shell-command (concat write-cmd " " (file-relative-name target)))))
+              (org-noter-utils-add-pdf-meta (file-relative-name target))))
 
           (when (> (length notes-files) 1)
             (setq notes-files (list (completing-read "In which notes file should we create the heading? "

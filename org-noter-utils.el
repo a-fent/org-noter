@@ -29,17 +29,21 @@
 
 (defvar org-noter--site-directory)
 
-(defun org-noter-utils-pdf-meta-advice (orig-func &rest args)
+(defun org-noter-utils-pdf-meta-advice (orig-func &optional arg)
   "Read META of BUFFER-OR-FILE. If the second argument is nil,
 read current buffer."
-  (let ((notes-file-path (s-chomp
-                          (shell-command-to-string
-                           (format "%s %s NotesFile"
-                                   (expand-file-name "read_meta.py" org-noter--site-directory)
-                                   (shell-quote-argument (pdf-info--normalize-file-or-buffer args)))))))
-    (-insert-at 5 (cons 'notes notes-file-path) (apply orig-func args))))
-
+  (let ((notes-file-path (org-noter-utils-read-pdf-meta "NotesFile" arg)))
+    (-insert-at 5 (cons 'notes notes-file-path) (apply orig-func arg))))
 (advice-add #'pdf-info-metadata :around #'org-noter-utils-pdf-meta-advice)
+
+(defun org-noter-utils-read-pdf-meta (meta &optional buffer-or-file)
+  "Read metadata from pdf file."
+  (s-chomp
+   (shell-command-to-string
+    (format "%s %s %s"
+            (expand-file-name "read_meta.py" org-noter--site-directory)
+            (shell-quote-argument (pdf-info--normalize-file-or-buffer buffer-or-file))
+            meta))))
 
 (defun org-noter-utils-remove-pdf-meta (&optional buffer-or-file)
   "Remove notes file meta from BUFFER-OR-FILE."
