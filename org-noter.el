@@ -1180,7 +1180,7 @@ Only available with PDF Tools."
                            (when (or (= i (1- len))
                                      (>= (abs (- (nth 3 (nth i medges))
                                                  (nth 1 (nth (1+ i) medges))))
-                                         0.0015))
+                                         0.0026))
                              (push (nreverse group) groups)
                              (setq group nil)))
 
