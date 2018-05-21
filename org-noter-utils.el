@@ -75,5 +75,14 @@ read current buffer."
                  (message "NotesFile meta added successfuly")
                (message "Error during adding metadata"))))))
 
+(defun org-noter-utils-extract-doc-images (doc-path img-dir)
+  "Extract images from a PDF document."
+  (interactive)
+  (let ((cmd (expand-file-name "get_pdf_images.py" org-noter--site-directory)))
+    (call-process-shell-command
+     (format "cd %s && %s %s"
+             (shell-quote-argument img-dir)
+             (shell-quote-argument cmd)
+             (shell-quote-argument doc-path)))))
 
 (provide 'org-noter-utils)

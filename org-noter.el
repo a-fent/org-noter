@@ -1263,15 +1263,10 @@ Only available with PDF Tools."
                (cond ((= (length data) 5)
                       (let ((text (aref data 3))
                             (img-dir (org-download--dir))
-                            (cmd (expand-file-name "get_pdf_images.py" org-noter--site-directory))
-                            (doc (expand-file-name (org-entry-get nil org-noter-property-doc-file t))))
+                            (doc-path (expand-file-name (org-entry-get nil org-noter-property-doc-file t))))
 
                         (if (and (string-match org-noter-figure-caption-regexp text)
-                                 (eq 0 (call-process-shell-command
-                                        (format "cd %s && %s %s"
-                                                (shell-quote-argument img-dir)
-                                                (shell-quote-argument cmd)
-                                                (shell-quote-argument doc)))))
+                                 (eq 0 (org-noter-utils-extract-doc-images doc-path img-dir)))
 
                             (let* ((old-num (string-to-int (match-string 1 text)))
                                    (new-num (1- old-num))
@@ -1659,12 +1654,8 @@ notes file, even if it finds one."
                                   document-path))
         (org-entry-put nil org-noter-property-doc-file document-property))
 
-      (call-process-shell-command
-       (format "%s -a %s %s"
-               (expand-file-name "change_meta.py" org-noter--site-directory)
-               (shell-quote-argument document-property)
-               (shell-quote-argument (file-relative-name notes-file-path
-                                                         (file-name-directory document-property)))))
+      (org-noter-utils-add-pdf-meta (file-relative-name notes-file-path (file-name-directory document-property))
+                                    document-property)
 
       (setq ast (org-noter--parse-root (current-buffer) document-property))
       (when (catch 'should-continue
