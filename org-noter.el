@@ -1086,8 +1086,7 @@ are referenced by its edges, but functions for these tasks need region."
         (bottom0 (nth 3 (car edges)))
         (top1 (nth 1 (car (last edges))))
         (right1 (nth 2 (car (last edges))))
-        (bottom1 (nth 3 (car (last edges))))
-        (n (safe-length edges)))
+        (bottom1 (nth 3 (car (last edges)))))
     ;; we try to guess the line height to move
     ;; the region away from the boundary and
     ;; avoid double lines
@@ -1268,7 +1267,7 @@ Only available with PDF Tools."
                         (if (and (string-match org-noter-figure-caption-regexp text)
                                  (eq 0 (org-noter-utils-extract-doc-images doc-path img-dir)))
 
-                            (let* ((old-num (string-to-int (match-string 1 text)))
+                            (let* ((old-num (string-to-number (match-string 1 text)))
                                    (new-num (1- old-num))
                                    ;; get file extension of the original file
                                    (ext (ignore-errors
@@ -1695,8 +1694,6 @@ notes file, even if it finds one."
                (select-frame-set-input-focus (org-noter--session-frame org-noter--session)))
 
       (let* ((document-name buffer-file-name)
-             (document-non-directory (file-name-nondirectory document-name))
-             (document-directory (file-name-directory document-name))
              (document-base (file-name-base document-name))
              (document-location (org-noter--doc-approx-location 'infer))
              (name-candidates (append org-noter-default-notes-file-names (list (concat document-base ".org"))))
@@ -1769,7 +1766,6 @@ notes file, even if it finds one."
                (select-frame-set-input-focus (org-noter--session-frame org-noter--session)))
 
       (let* ((document-name buffer-file-name)
-             (document-non-directory (file-name-nondirectory document-name))
              (document-directory (file-name-directory document-name))
              (document-base (file-name-base document-name))
              (document-location (org-noter--doc-approx-location 'infer))
