@@ -32,6 +32,7 @@ trailer = PdfReader(inpfn)
 
 if trailer.Info[attrib]:
     results = clean_results(trailer.Info[attrib])
-    print(results)
 else:
-    print('None')
+    results = trailer.Info[attrib]
+
+print(results)
