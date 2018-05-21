@@ -40,6 +40,7 @@
 (require 'org)
 (require 'org-element)
 (require 'org-download)
+(require 'org-noter-utils)
 (require 'cl-lib)
 
 (declare-function doc-view-goto-page "doc-view")
