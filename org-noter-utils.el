@@ -85,4 +85,15 @@ read current buffer."
              (shell-quote-argument cmd)
              (shell-quote-argument doc-path)))))
 
+(defun org-noter-utils-remove-extracted-images ()
+  "Remove extracted images"
+  (interactive)
+  (when (not (eq major-mode 'org-mode))
+    (error "You are not in an org-mode buffer"))
+  (when (org-before-first-heading-p)
+    (error "This command must be issued inside an org heading"))
+  (mapcar (lambda (e) (delete-directory (concat (org-download--dir) "/" e) t))
+          '("raw" "small"))
+  (message "Image directories removed successfully!"))
+
 (provide 'org-noter-utils)
