@@ -22,4 +22,5 @@ CLOSED: [2018-05-19 Sat 14:22]
 CLOSED: [2018-05-20 Sun 21:47]
 * TODO 从org-zotxt-noter进入时，如果已有文档路径，则不会插入zotero链接
 * TODO 研究怎样在indirect buffer中使用translator
-* TODO 如果已经有导入的annotation了，怎样增量导入，只导入那些没有导入过的
+* DONE 如果已经有导入的annotation了，怎样增量导入，只导入那些没有导入过的
+CLOSED: [2018-05-23 Wed 23:08]
