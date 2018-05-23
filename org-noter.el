@@ -1109,6 +1109,19 @@ given, determine through the middle page of the PDF."
                    (< (/ (- (nth 0 item) 0.5) (- (nth 2 item) 0.5)) 0.1))
           (throw 'p t))))))
 
+(defun org-noter--get-location-cons ()
+  "Extract location cons from org buffer properties."
+  (let ((case-fold-search nil)
+        page edge data)
+    (save-excursion
+      (save-match-data
+        (goto-char 1)
+        (while (re-search-forward "^[ \t]*:NOTER_PAGE: (\\([0-9]+\\) \\. \\([.0-9]+\\))\n" nil t)
+          (setq page (string-to-number (match-string 1))
+                edge (string-to-number (match-string 2)))
+          (push (cons page edge) data))
+        (nreverse data)))))
+
 (defun org-noter-create-skeleton ()
   "Create notes skeleton with the PDF outline or annotations.
 Only available with PDF Tools."
@@ -1118,7 +1131,7 @@ Only available with PDF Tools."
     ((eq (org-noter--session-doc-mode session) 'pdf-view-mode)
      (let* ((ast (org-noter--parse-root))
             (level (org-element-property :level ast))
-            output-data)
+            output-data location-cons annots-head-p)
        (with-current-buffer (org-noter--session-doc-buffer session)
          (cond
           ((string= "Outline" (completing-read "What do you want to import? " '("Outline" "Annotations")))
@@ -1243,54 +1256,65 @@ Only available with PDF Tools."
                                              (org-noter--compare-location-cons '< (aref e1 1) (aref e2 1)))))))))))
 
        (with-current-buffer (org-noter--session-notes-buffer session)
+         (setq location-cons (org-noter--get-location-cons))
+         (when (and (goto-char 1) (re-search-forward "^[ \t]*[*]+ Annotations\n" nil t))
+           (setq annots-head-p t))
          ;; NOTE(nox): org-with-wide-buffer can't be used because we wan't to set the
          ;; narrow region
          (widen)
          (save-excursion
-           (goto-char (org-element-property :end ast))
+           (when (not annots-head-p)
+             (goto-char (org-element-property :end ast)))
+
+           (when annots-head-p
+             (setq output-data (cdr output-data)))
 
            (dolist (data output-data)
-             (org-noter--insert-heading (+ level (aref data 2)))
-             (insert (aref data 0))
-             (if (and (not (eobp)) (org-next-line-empty-p))
-                 (forward-line)
-               (insert "\n"))
-             (when (aref data 1)
-               (org-entry-put
-                nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))
+             (cond ((not (member (aref data 1) location-cons))
+                    (insert "\n")
+                    (org-noter--insert-heading (+ level (aref data 2)))
+                    (insert (aref data 0))
+                    (if (and (not (eobp)) (org-next-line-empty-p))
+                        (forward-line)
+                      (insert "\n"))
+                    (when (aref data 1)
+                      (org-entry-put
+                       nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))
 
-               (cond ((= (length data) 5)
-                      (let ((text (aref data 3))
-                            (img-dir (org-download--dir))
-                            (doc-path (expand-file-name (org-entry-get nil org-noter-property-doc-file t))))
+                      (cond ((= (length data) 5)
+                             (let ((text (aref data 3))
+                                   (img-dir (org-download--dir))
+                                   (doc-path (expand-file-name (org-entry-get nil org-noter-property-doc-file t))))
 
-                        (if (and (string-match org-noter-figure-caption-regexp text)
-                                 (eq 0 (org-noter-utils-extract-doc-images doc-path img-dir)))
+                               (if (and (string-match org-noter-figure-caption-regexp text)
+                                        (eq 0 (org-noter-utils-extract-doc-images doc-path img-dir)))
 
-                            (let* ((old-num (string-to-number (match-string 1 text)))
-                                   (new-num (1- old-num))
-                                   ;; get file extension of the original file
-                                   (ext (ignore-errors
-                                          (file-name-extension
-                                           (car (directory-files (concat img-dir "/raw") nil (format "fig-%03d\\." new-num))))))
-                                   img-file)
+                                   (let* ((old-num (string-to-number (match-string 1 text)))
+                                          (new-num (1- old-num))
+                                          ;; get file extension of the original file
+                                          (ext (ignore-errors
+                                                 (file-name-extension
+                                                  (car (directory-files (concat img-dir "/raw") nil (format "fig-%03d\\." new-num))))))
+                                          img-file)
 
-                              (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
-                              (cond
-                               ;; if the raw image exists, then the small image exists
-                               (ext
-                                (setq img-file (format "%s/small/fig-%03ds.%s" img-dir new-num ext))
-                                (insert (format "[[file:%s]]" img-file))
-                                (org-redisplay-inline-images))
-                               (t (message "Image file fig-%03ds (Fig. %d) doesn't exist. Please insert manually!"
-                                           new-num old-num))))
+                                     (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
+                                     (cond
+                                      ;; if the raw image exists, then the small image exists
+                                      (ext
+                                       (setq img-file (format "%s/small/fig-%03ds.%s" img-dir new-num ext))
+                                       (insert (format "[[file:%s]]" img-file))
+                                       (org-redisplay-inline-images))
+                                      (t (message "Image file fig-%03ds (Fig. %d) doesn't exist. Please insert manually!"
+                                                  new-num old-num))))
 
-                          (insert "\n" text)
-                          (fill-paragraph))))
+                                 (insert "\n" text)
+                                 (fill-paragraph))))
 
-                     ((= (length data) 4)
-                      (insert "\n" (aref data 3))
-                      (fill-paragraph)))))
+                            ((= (length data) 4)
+                             (insert "\n" (aref data 3))
+                             (fill-paragraph)))))
+                   (t (re-search-forward (regexp-quote (org-noter--pretty-print-location (aref data 1))) nil t)
+                      (org-end-of-subtree))))
 
            (setq ast (org-noter--parse-root))
            (org-noter--narrow-to-root ast)
