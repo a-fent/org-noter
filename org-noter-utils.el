@@ -62,7 +62,9 @@ read current buffer."
   (interactive "fEnter a notes file: ")
   (cond ((or (not notes-file-path)
              (directory-name-p notes-file-path)
-             (not (file-readable-p notes-file-path)))
+             (not (file-readable-p
+                   (expand-file-name notes-file-path
+                                     (pdf-info--normalize-file-or-buffer buffer-or-file)))))
          (error "\"%s\" is not a valid notes file name" notes-file-path))
         (t (let ((ret-code
                   (call-process-shell-command

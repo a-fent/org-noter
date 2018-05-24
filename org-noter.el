@@ -1677,7 +1677,7 @@ notes file, even if it finds one."
                                   document-path))
         (org-entry-put nil org-noter-property-doc-file document-property))
 
-      (org-noter-utils-add-pdf-meta (file-relative-name notes-file-path (file-name-directory document-property))
+      (org-noter-utils-add-pdf-meta (file-relative-name notes-file-path document-property)
                                     document-property)
 
       (setq ast (org-noter--parse-root (current-buffer) document-property))
