@@ -7,6 +7,7 @@ import os
 import glob
 import argparse
 import subprocess
+import errno
 
 # * Code
 
@@ -78,8 +79,11 @@ if __name__ == '__main__':
 
     try:
         os.mkdir('raw')
-    except FileExistsError:
-        pass
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            pass
+        else:
+            raise
 
     if not os.listdir('raw'):
         subprocess.call(
@@ -96,8 +100,11 @@ if __name__ == '__main__':
 
     try:
         os.mkdir('small')
-    except FileExistsError:
-        pass
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            pass
+        else:
+            raise
 
     if not os.listdir('small'):
         subprocess.call('cp -r ./raw/* ./small/', shell=True)
