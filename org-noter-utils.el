@@ -41,7 +41,7 @@ read current buffer."
   (s-chomp
    (shell-command-to-string
     (format "%s %s %s"
-            (expand-file-name "py/read_meta.py" org-noter--site-directory)
+            (expand-file-name "read_meta.py" org-noter--site-directory)
             (shell-quote-argument (pdf-info--normalize-file-or-buffer buffer-or-file))
             meta))))
 
@@ -50,7 +50,7 @@ read current buffer."
   (interactive)
   (let ((ret-code
          (call-process-shell-command (format "%s %s NotesFile -r"
-                                             (expand-file-name "py/change_meta.py" org-noter--site-directory)
+                                             (expand-file-name "change_meta.py" org-noter--site-directory)
                                              (shell-quote-argument
                                               (pdf-info--normalize-file-or-buffer buffer-or-file))))))
     (if (= 0 ret-code)
@@ -69,7 +69,7 @@ read current buffer."
         (t (let ((ret-code
                   (call-process-shell-command
                    (format "%s -a %s %s"
-                           (expand-file-name "py/change_meta.py" org-noter--site-directory)
+                           (expand-file-name "change_meta.py" org-noter--site-directory)
                            (shell-quote-argument
                             (pdf-info--normalize-file-or-buffer buffer-or-file))
                            (shell-quote-argument notes-file-path)))))
@@ -80,7 +80,7 @@ read current buffer."
 (defun org-noter-utils-extract-doc-images (doc-path img-dir)
   "Extract images from a PDF document."
   (interactive)
-  (let ((cmd (expand-file-name "py/get_pdf_images.py" org-noter--site-directory)))
+  (let ((cmd (expand-file-name "get_pdf_images.py" org-noter--site-directory)))
     (call-process-shell-command
      (format "cd %s && %s %s"
              (shell-quote-argument img-dir)
