@@ -5,7 +5,7 @@
 ;; Author: Gonçalo Santos (aka. weirdNox@GitHub)
 ;; Homepage: https://github.com/weirdNox/org-noter
 ;; Keywords: lisp pdf interleave annotate external sync notes documents org-mode
-;; Package-Requires: ((emacs "24.4") (cl-lib "0.6"))
+;; Package-Requires: ((emacs "24.4") (cl-lib "0.6") (org-plus-contrib "9.1.13") (org-download "0.1.0"))
 ;; Version: 1.0.1
 
 ;; This file is not part of GNU Emacs.
