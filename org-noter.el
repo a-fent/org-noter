@@ -1672,9 +1672,8 @@ notes file, even if it finds one."
         (when (or (file-directory-p document-path) (not (file-readable-p document-path)))
           (user-error "Invalid file path"))
 
-        (setq document-property (if (y-or-n-p "Do you want a relative file name? ")
-                                    (file-relative-name document-path)
-                                  document-path))
+        (setq document-property (file-relative-name document-path))
+
         (org-entry-put nil org-noter-property-doc-file document-property))
 
       (org-noter-utils-add-pdf-meta (file-relative-name notes-file-path document-property)
