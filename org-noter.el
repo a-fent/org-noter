@@ -1676,8 +1676,14 @@ notes file, even if it finds one."
 
         (org-entry-put nil org-noter-property-doc-file document-property))
 
-      (org-noter-utils-add-pdf-meta (file-relative-name notes-file-path document-property)
-                                    document-property)
+      (save-buffer)
+      (let ((document-truename (file-truename document-property)))
+        (org-noter-utils-add-pdf-meta (file-relative-name
+                                       notes-file-path
+                                       (prog1 document-truename
+                                         (message "Generating PDF meta, the absolute path of PDF is:\n%s"
+                                                  document-truename)))
+                                      document-truename))
 
       (setq ast (org-noter--parse-root (current-buffer) document-property))
       (when (catch 'should-continue
