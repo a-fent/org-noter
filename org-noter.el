@@ -1735,10 +1735,13 @@ notes file, even if it finds one."
 
         (dolist (file notes-files)
           (with-temp-buffer
-            (insert-file-contents file)
+            (insert-file-contents (prog1 (expand-file-name file document-name)
+                                    (message "%s" (expand-file-name file document-name))))
             (catch 'break
               (while (re-search-forward (org-re-property org-noter-property-doc-file) nil t)
-                (when (string= (expand-file-name (match-string 3) directory) document-name)
+                (when (string= (prog1 (file-truename (match-string 3))
+                                 (message "%s" (file-truename (match-string 3))))
+                               (prog1 document-name (message "%s" document-name)))
                   (push file notes-files-with-heading)
                   (throw 'break t))))))
 
@@ -1776,15 +1779,16 @@ notes file, even if it finds one."
                              (file-relative-name document-name (file-name-directory (car notes-files)))))
             (setq notes-files-with-heading notes-files)))
 
-        (with-current-buffer (find-file-noselect (car notes-files-with-heading))
+        (with-current-buffer (find-file-noselect (expand-file-name (car notes-files-with-heading) document-name))
           (org-with-wide-buffer
            (catch 'break
              (goto-char (point-min))
              (while (re-search-forward (org-re-property org-noter-property-doc-file) nil t)
-               (when (string= (expand-file-name (match-string 3)
-                                                (file-name-directory (car notes-files-with-heading)))
-                              document-name)
-                 (let ((org-noter--start-location-override document-location))
+               (when (string= (prog1 (file-truename (expand-file-name (match-string 3) (car notes-files-with-heading)))
+                                (message "%s" (file-truename (expand-file-name (match-string 3) (car notes-files-with-heading)))))
+                              (prog1 document-name (message "%s" document-name)))
+                 (let ((org-noter--start-location-override (prog1 document-location
+                                                             (message "Opening PDF document:\n%s" document-location))))
                    (org-noter))
                  (throw 'break t)))))))))
 
