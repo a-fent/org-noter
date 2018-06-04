@@ -75,7 +75,11 @@ if __name__ == '__main__':
     trailer = PdfReader(inpfn)
 
     if args.remove:
-        trailer.Info.pop('/NotesFile')
+        try:
+            trailer.Info.pop('/NotesFile')
+        except KeyError:
+            pass
+
         PdfWriter(outfn, trailer=trailer).write()
         os.rename(outfn, inpfn)
 
