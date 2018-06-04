@@ -48,36 +48,39 @@ read current buffer."
 (defun org-noter-utils-remove-pdf-meta (&optional buffer-or-file)
   "Remove notes file meta from BUFFER-OR-FILE."
   (interactive)
-  (let ((ret-code
-         (call-process-shell-command (format "%s %s NotesFile -r"
-                                             (expand-file-name "change_meta.py" org-noter--site-directory)
-                                             (shell-quote-argument
-                                              (pdf-info--normalize-file-or-buffer buffer-or-file))))))
-    (if (= 0 ret-code)
-        (message "NotesFile meta removed successfuly")
-      (message "Error during removing metadata"))))
+  (when (not (eq system-type 'windows-nt))
+    (let ((ret-code
+           (call-process-shell-command
+            (format "%s %s NotesFile -r"
+                    (expand-file-name "change_meta.py" org-noter--site-directory)
+                    (shell-quote-argument
+                     (pdf-info--normalize-file-or-buffer buffer-or-file))))))
+      (if (= 0 ret-code)
+          (message "NotesFile meta removed successfuly")
+        (message "Error during removing metadata")))))
 
 (defun org-noter-utils-add-pdf-meta (notes-file-path &optional buffer-or-file)
   "Remove notes file meta from BUFFER-OR-FILE."
   (interactive "fEnter a notes file: ")
-  (let (abs-path)
-    (message "Adding notes file path (%s) to\nPDF document (%s)" notes-file-path buffer-or-file)
-    (cond ((or (not notes-file-path)
-               (directory-name-p notes-file-path)
-               (not (file-readable-p
-                     (setq abs-path
-                           (expand-file-name notes-file-path buffer-or-file)))))
-           (error "\"%s\" is not a valid notes file name" abs-path))
-          (t (let ((ret-code
-                    (call-process-shell-command
-                     (format "%s -a %s %s"
-                             (expand-file-name "change_meta.py" org-noter--site-directory)
-                             (shell-quote-argument
-                              (pdf-info--normalize-file-or-buffer buffer-or-file))
-                             (shell-quote-argument notes-file-path)))))
-               (if (= 0 ret-code)
-                   (message "NotesFile meta added successfuly")
-                 (message "Error during adding metadata")))))))
+  (when (not (eq system-type 'windows-nt))
+    (let (abs-path)
+      (message "Adding notes file path (%s) to\nPDF document (%s)" notes-file-path buffer-or-file)
+      (cond ((or (not notes-file-path)
+                 (directory-name-p notes-file-path)
+                 (not (file-readable-p
+                       (setq abs-path
+                             (expand-file-name notes-file-path buffer-or-file)))))
+             (error "\"%s\" is not a valid notes file name" abs-path))
+            (t (let ((ret-code
+                      (call-process-shell-command
+                       (format "%s -a %s %s"
+                               (expand-file-name "change_meta.py" org-noter--site-directory)
+                               (shell-quote-argument
+                                (pdf-info--normalize-file-or-buffer buffer-or-file))
+                               (shell-quote-argument notes-file-path)))))
+                 (if (= 0 ret-code)
+                     (message "NotesFile meta added successfuly")
+                   (message "Error during adding metadata"))))))))
 
 (defun org-noter-utils-extract-doc-images (doc-path img-dir)
   "Extract images from a PDF document."
