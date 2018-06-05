@@ -132,6 +132,17 @@ When nil, it will use the selected frame if it does not belong to any other sess
   :group 'org-noter
   :type 'string)
 
+(defcustom org-noter-region-scale-factors (list '(highlight . (3 . 2))
+                                                '(underline . (7 . 2))
+                                                '(squiggly . (3 . 2))
+                                                '(strike-out . (4 . 2))
+                                                '(extra . (5 . 5)))
+  "Scale factors for highlighted region. The first number
+corresponds to top, the second to bottom. The larger the number
+is, the larger the region."
+  :group 'org-noter
+  :type 'string)
+
 (defface org-noter-no-notes-exist-face
   '((t
      :foreground "chocolate"
@@ -1076,11 +1087,7 @@ want to kill."
 We need this to import annotations and to get marked-up text, because annotations
 are referenced by its edges, but functions for these tasks need region."
 
-  (let ((denorm-list (list '(highlight . (3 . 2))
-                           '(underline . (7 . 2))
-                           '(squiggly . (3 . 2))
-                           '(strike-out . (4 . 2))
-                           '(extra . (5 . 5))))
+  (let ((denorm-list org-noter-region-scale-factors)
         (left0 (nth 0 (car edges)))
         (top0 (nth 1 (car edges)))
         (bottom0 (nth 3 (car edges)))
