@@ -172,6 +172,10 @@ is, the larger the region."
 (defvar-local org-noter--session nil
   "Session associated with the current buffer.")
 
+(defvar org-noter--notes-file-path nil
+  "Notes file path associated with the PDF document.")
+(put 'org-noter--notes-file-path 'safe-local-variable #'stringp)
+
 (defvar org-noter--inhibit-location-change-handler nil
   "Prevent location change from updating point in notes.")
 
@@ -1684,13 +1688,12 @@ notes file, even if it finds one."
         (org-entry-put nil org-noter-property-doc-file document-property))
 
       (save-buffer)
-      (let ((document-truename (file-truename document-property)))
-        (org-noter-utils-add-pdf-meta (file-relative-name
-                                       notes-file-path
-                                       (prog1 document-truename
-                                         (message "Generating PDF meta, the absolute path of PDF is:\n%s"
-                                                  document-truename)))
-                                      document-truename))
+      (let* ((document-truename-directory (file-name-directory (file-truename document-property)))
+             (val (file-relative-name notes-file-path document-truename-directory))
+             (default-directory document-truename-directory))
+        (org-noter-utils-modify-dir-local-variable 'pdf-view-mode
+                                                   'org-noter--notes-file-path val
+                                                   'add-or-replace))
 
       (setq ast (org-noter--parse-root (current-buffer) document-property))
       (when (catch 'should-continue
@@ -1733,22 +1736,19 @@ notes file, even if it finds one."
              (document-base (file-name-base document-name))
              (document-location (org-noter--doc-approx-location 'infer))
              (name-candidates (append org-noter-default-notes-file-names (list (concat document-base ".org"))))
-             (reading-results (org-noter-utils-read-pdf-meta "NotesFile"))
-             (notes-files (when (and (not (s-blank-str? reading-results))
-                                     (not (string= "None" reading-results)))
-                            (s-split ":" reading-results t)))
+             (notes-files (list org-noter--notes-file-path))
              (document-title (org-noter-utils-read-pdf-meta "Title"))
              notes-files-with-heading)
 
         (dolist (file notes-files)
           (with-temp-buffer
-            (insert-file-contents (prog1 (expand-file-name file document-name)
-                                    (message "%s" (expand-file-name file document-name))))
+            (insert-file-contents (prog1 (expand-file-name file)
+                                    (message "1 %s" (expand-file-name file))))
             (catch 'break
               (while (re-search-forward (org-re-property org-noter-property-doc-file) nil t)
                 (when (string= (prog1 (file-truename (match-string 3))
-                                 (message "%s" (file-truename (match-string 3))))
-                               (prog1 document-name (message "%s" document-name)))
+                                 (message "2 %s" (file-truename (match-string 3))))
+                               (prog1 document-name (message "3 %s" document-name)))
                   (push file notes-files-with-heading)
                   (throw 'break t))))))
 
@@ -1766,7 +1766,11 @@ notes file, even if it finds one."
               (setq target (expand-file-name notes-file-name directory)
                     notes-files (list target))
               (unless (file-exists-p target) (write-region "" nil target))
-              (org-noter-utils-add-pdf-meta (file-relative-name target))))
+              (setq-local org-noter--notes-file-path (file-relative-name target))
+              (org-noter-utils-modify-dir-local-variable
+               'pdf-view-mode
+               'org-noter--notes-file-path org-noter--notes-file-path
+               'add-or-replace)))
 
           (when (> (length notes-files) 1)
             (setq notes-files (list (completing-read "In which notes file should we create the heading? "
@@ -1786,14 +1790,14 @@ notes file, even if it finds one."
                              (file-relative-name document-name (file-name-directory (car notes-files)))))
             (setq notes-files-with-heading notes-files)))
 
-        (with-current-buffer (find-file-noselect (expand-file-name (car notes-files-with-heading) document-name))
+        (with-current-buffer (find-file-noselect (expand-file-name (car notes-files-with-heading)))
           (org-with-wide-buffer
            (catch 'break
              (goto-char (point-min))
              (while (re-search-forward (org-re-property org-noter-property-doc-file) nil t)
-               (when (string= (prog1 (file-truename (expand-file-name (match-string 3) (car notes-files-with-heading)))
-                                (message "%s" (file-truename (expand-file-name (match-string 3) (car notes-files-with-heading)))))
-                              (prog1 document-name (message "%s" document-name)))
+               (when (string= (prog1 (file-truename (expand-file-name (match-string 3)))
+                                (message "4 %s" (file-truename (expand-file-name (match-string 3)))))
+                              (prog1 document-name (message "5 %s" document-name)))
                  (let ((org-noter--start-location-override (prog1 document-location
                                                              (message "Opening PDF document:\n%s" document-location))))
                    (org-noter))
