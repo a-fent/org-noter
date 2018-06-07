@@ -1133,6 +1133,65 @@ given, determine through the middle page of the PDF."
           (push (cons page edge) data))
         (nreverse data)))))
 
+(defun org-noter--group-annots (markup-edges)
+  "Group MARKUP-EDGES of multi-region annotation"
+  (let (group all-groups)
+    (dotimes (i (length markup-edges))
+      (push (nth i markup-edges) group)
+      (when (or (= i (1- (length markup-edges)))
+                (>= (abs (- (nth 3 (nth i markup-edges))
+                            (nth 1 (nth (1+ i) markup-edges))))
+                    ;; TODO the criterion is hard-coded, we could use a variable here
+                    0.0026))
+        (push (nreverse group) all-groups)
+        (setq group nil)))
+    all-groups))
+
+(defun org-noter--extract-markup-text (page real-edges)
+  "Extract text from REAL-EDGES of specific PAGE, and unfill the
+text."
+  (replace-regexp-in-string
+   "-?\n"
+   (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
+   (pdf-info-gettext page real-edges)))
+
+(defun org-noter--get-annot-region-text (annot)
+  "Parse ANNOT and return a con cell (TEXT . REAL-EDGES). This
+function can parse both single-region annotations and
+multi-region annotations."
+  (let* ((markup-edges (alist-get 'markup-edges annot))
+         (page (alist-get 'page annot))
+         (type (alist-get 'type annot))
+         (subject (assoc-default 'subject annot))
+         (contents (assoc-default 'contents annot))
+         (all-groups (org-noter--group-annots markup-edges))
+         real-edges text)
+
+    (cond ((= 1 (length all-groups))
+           (setq real-edges (org-noter-edges-to-region markup-edges type))
+           (setq text
+                 (or subject
+                     (if (not (s-blank-str? contents))
+                         contents
+                       (org-noter--extract-markup-text page real-edges)))))
+          (t
+           ;; convert
+           (let ((temp-list (mapcar (lambda (e) (org-noter-edges-to-region e 'extra)) all-groups)))
+             ;; sort
+             (setq temp-list
+                   (sort temp-list
+                         (lambda (e1 e2)
+                           (or (not e1)
+                               (and e2 (org-noter--compare-location-cons-2 e1 e2))))))
+             (setq real-edges (car temp-list))
+             (setq text
+                   (or subject
+                       (if (not (s-blank-str? contents))
+                           contents
+                         (mapconcat (lambda (e) (concat "- " (org-noter--extract-markup-text page e)))
+                                    temp-list "\n")))))))
+    (cons text real-edges)))
+
 (defun org-noter-create-skeleton ()
   "Create notes skeleton with the PDF outline or annotations.
 Only available with PDF Tools."
@@ -1179,12 +1238,16 @@ Only available with PDF Tools."
                    (setq possible-annots (delq chosen-pair possible-annots))
                    (when (= 1 (length chosen-annots)) (push '("DONE") possible-annots)))))
 
-             (dolist (item (pdf-info-getannots))
-               (let ((type  (alist-get 'type item))
-                     (page  (alist-get 'page item))
-                     (edges (or (car (alist-get 'markup-edges item))
-                                (alist-get 'edges item)))
-                     name text cont)
+             (dolist (annot (pdf-info-getannots))
+               (let ((type  (alist-get 'type annot))
+                     (page  (alist-get 'page annot))
+                     ;; the variable `edges' is used to determine positions of
+                     ;; annotations; `name' is used in the heading to
+                     ;; distinguish different types of annotations
+                     (edges (or (car (alist-get 'markup-edges annot))
+                                (alist-get 'edges annot)))
+                     name text)
+
                  (when (and (memq type chosen-annots) (> page 0))
                    (setq name (cond ((eq type 'highlight) "重点")
                                     ((eq type 'underline) "词句")
@@ -1194,48 +1257,14 @@ Only available with PDF Tools."
                                     ((eq type 'link) "链接")))
 
                    (if (memq type '(highlight underline squiggly strike-out))
-                       (let* ((medges (alist-get 'markup-edges item))
-                              (len (length medges))
-                              real-edges groups group)
-
-                         (dotimes (i len groups)
-                           (push (nth i medges) group)
-                           (when (or (= i (1- len))
-                                     (>= (abs (- (nth 3 (nth i medges))
-                                                 (nth 1 (nth (1+ i) medges))))
-                                         0.0026))
-                             (push (nreverse group) groups)
-                             (setq group nil)))
-
-                         (cond ((= 1 (length groups))
-                                (setq real-edges (org-noter-edges-to-region medges type)
-                                      text (or (assoc-default 'subject item)
-                                               (when (not (s-blank-str? (setq cont (assoc-default 'contents item)))) cont)
-                                               (replace-regexp-in-string "-?\n"
-                                                                         (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
-                                                                         (pdf-info-gettext page real-edges)))))
-                               (t
-                                (let ((sorted-list (sort
-                                                    (mapcar (lambda (e) (org-noter-edges-to-region e 'extra)) groups)
-                                                    (lambda (e1 e2)
-                                                      (or (not e1)
-                                                          (and e2 (org-noter--compare-location-cons-2 e1 e2)))))))
-                                  (setq real-edges (car sorted-list)
-                                        text (or (assoc-default 'subject item)
-                                                 (when (not (s-blank-str? (setq cont (assoc-default 'contents item)))) cont)
-                                                 (mapconcat
-                                                  (lambda (e)
-                                                    (concat "- "
-                                                            (replace-regexp-in-string
-                                                             "-?\n"
-                                                             (lambda (match) (pcase match ("-\n" "") ("\n" " ")))
-                                                             (pdf-info-gettext page e))))
-                                                  sorted-list
-                                                  "\n"))))))
+                       (let* ((res (org-noter--get-annot-region-text annot))
+                              (real-edges (cdr res)))
+                         (setq text (car res))
                          (push (vector (format "%s on page %d" name page)
-                                       (cons page (nth 1 edges)) 2 text (cons page real-edges))
+                                       (cons page (nth 1 edges)) 2 text
+                                       (cons page real-edges))
                                output-data))
-                     (setq text (assoc-default 'contents item))
+                     (setq text (assoc-default 'contents annot))
                      (push (vector (format "%s on page %d" name page) (cons page (nth 1 edges)) 2 text)
                            output-data))))))
 
