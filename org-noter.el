@@ -1192,6 +1192,33 @@ multi-region annotations."
                                     temp-list "\n")))))))
     (cons text real-edges)))
 
+(defun org-noter--insert-annotation-body (doc-file text)
+  "Insert body text of each annotations. If figure caption is
+selected, the figure will be extracted and insert as an org
+link."
+  (let ((img-dir (org-download--dir)))
+    (if (and (string-match org-noter-figure-caption-regexp text) ; is caption
+             (eq 0 (org-noter-utils-extract-doc-images doc-file img-dir))) ; images can be extracted
+
+        ;; insert image caption
+        (let* ((capt-num (string-to-number (match-string 1 text)))
+               (file-num (1- capt-num))
+               (img-file (concat img-dir "/small/" (format "fig-%03ds\.png" file-num))))
+          (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
+          (if (file-exists-p img-file)
+              (progn
+                (insert (format "[[file:%s]]" img-file))
+                (org-redisplay-inline-images))
+            (message "Image file fig-%03ds (Fig. %d) doesn't exist. Please capture manually!"
+                     file-num capt-num)))
+
+      ;; NOTE (et2010) sometimes below insertion could cause emacs crashing. I
+      ;; haven't figured out how to debug this issue.
+
+      ;; else, just insert the text as is
+      (insert "\n" text)
+      (fill-paragraph))))
+
 (defun org-noter-create-skeleton ()
   "Create notes skeleton with the PDF outline or annotations.
 Only available with PDF Tools."
@@ -1297,7 +1324,9 @@ Only available with PDF Tools."
 
        (with-current-buffer (org-noter--session-notes-buffer session)
          (setq location-cons (org-noter--get-location-cons))
-         (when (and (goto-char 1) (re-search-forward "^[ \t]*[*]+ Annotations\n" nil t))
+         (when (and (goto-char 1)
+                    (re-search-forward "^[ \t]*[*]+ Annotations\n" nil t))
+           (pop output-data)
            (setq annots-head-p t))
          ;; NOTE(nox): org-with-wide-buffer can't be used because we wan't to set the
          ;; narrow region
@@ -1306,55 +1335,29 @@ Only available with PDF Tools."
            (when (not annots-head-p)
              (goto-char (org-element-property :end ast)))
 
-           (when annots-head-p
-             (setq output-data (cdr output-data)))
+           (let ((doc-file (org-entry-get nil org-noter-property-doc-file t)))
+             (dolist (data output-data)
+               (cond ((not (member (aref data 1) location-cons))
+                      (insert "\n")
+                      (org-noter--insert-heading (+ level (aref data 2)))
+                      (insert (aref data 0))
+                      (if (and (not (eobp)) (org-next-line-empty-p))
+                          (forward-line)
+                        (insert "\n"))
+                      (when (aref data 1)
+                        (org-entry-put
+                         nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))
 
-           (dolist (data output-data)
-             (cond ((not (member (aref data 1) location-cons))
-                    (insert "\n")
-                    (org-noter--insert-heading (+ level (aref data 2)))
-                    (insert (aref data 0))
-                    (if (and (not (eobp)) (org-next-line-empty-p))
-                        (forward-line)
-                      (insert "\n"))
-                    (when (aref data 1)
-                      (org-entry-put
-                       nil org-noter-property-note-location (org-noter--pretty-print-location (aref data 1)))
+                        (let ((txt (aref data 3)))
+                          (cond ((= (length data) 5)
+                                 (org-noter--insert-annotation-body doc-file txt))
 
-                      (cond ((= (length data) 5)
-                             (let ((text (aref data 3))
-                                   (img-dir (org-download--dir))
-                                   (doc-path (expand-file-name (org-entry-get nil org-noter-property-doc-file t))))
+                                ((= (length data) 4)
+                                 (insert "\n" txt)
+                                 (fill-paragraph))))))
 
-                               (if (and (string-match org-noter-figure-caption-regexp text)
-                                        (eq 0 (org-noter-utils-extract-doc-images doc-path img-dir)))
-
-                                   (let* ((old-num (string-to-number (match-string 1 text)))
-                                          (new-num (1- old-num))
-                                          ;; get file extension of the original file
-                                          (ext (ignore-errors
-                                                 (file-name-extension
-                                                  (car (directory-files (concat img-dir "/raw") nil (format "fig-%03d\\." new-num))))))
-                                          img-file)
-
-                                     (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
-                                     (cond
-                                      ;; if the raw image exists, then the small image exists
-                                      (ext
-                                       (setq img-file (format "%s/small/fig-%03ds.%s" img-dir new-num ext))
-                                       (insert (format "[[file:%s]]" img-file))
-                                       (org-redisplay-inline-images))
-                                      (t (message "Image file fig-%03ds (Fig. %d) doesn't exist. Please insert manually!"
-                                                  new-num old-num))))
-
-                                 (insert "\n" text)
-                                 (fill-paragraph))))
-
-                            ((= (length data) 4)
-                             (insert "\n" (aref data 3))
-                             (fill-paragraph)))))
-                   (t (re-search-forward (regexp-quote (org-noter--pretty-print-location (aref data 1))) nil t)
-                      (org-end-of-subtree))))
+                     (t (re-search-forward (regexp-quote (org-noter--pretty-print-location (aref data 1))) nil t)
+                        (org-end-of-subtree)))))
 
            (setq ast (org-noter--parse-root))
            (org-noter--narrow-to-root ast)
