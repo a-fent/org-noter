@@ -1356,6 +1356,10 @@ Only available with PDF Tools."
                                  (insert "\n" txt)
                                  (fill-paragraph))))))
 
+                     ;; TODO when the layout is two-column, two different markup
+                     ;; annotations may have the same top edge value, and one of
+                     ;; them will be suppressed. How to fix that?
+
                      (t (re-search-forward (regexp-quote (org-noter--pretty-print-location (aref data 1))) nil t)
                         (org-end-of-subtree)))))
 
