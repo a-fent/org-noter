@@ -7,7 +7,6 @@ import os
 import glob
 import argparse
 import subprocess
-import errno
 
 # * Code
 
@@ -27,27 +26,6 @@ def parseArguments():
     args = parser.parse_args()
 
     return args
-
-
-def appendMark(filename):
-    name, ext = os.path.splitext(filename)
-    return "{name}s{ext}".format(name=name, ext=ext)
-
-
-def resizeImage(imgfile):
-    imageWidth = subprocess.check_output(
-        ['identify', '-format', "%w", imgfile])
-    if int(imageWidth) > maxWidth:
-        subprocess.call(
-            ['mogrify', '-resize', '{}x'.format(maxWidth), imgfile])
-
-    imageHeight = subprocess.check_output(
-        ['identify', '-format', "%h", imgfile])
-    if int(imageHeight) > maxHeight:
-        subprocess.call(
-            ['mogrify', '-resize', 'x{}'.format(maxHeight), imgfile])
-
-    return 0
 
 
 def chooseImages(pdfFile, fromPage=2):
@@ -74,43 +52,14 @@ def fixImage(imgfile):
 if __name__ == '__main__':
     args = parseArguments()
 
-    maxWidth = 560
-    maxHeight = 560
+    subprocess.call(
+        'pdfimages -f {page} -png "{pdf}" ./fig'.format(
+            page=args.fromPage, pdf=args.pdfFile),
+        shell=True)
 
-    try:
-        os.mkdir('raw')
-    except OSError as e:
-        if e.errno == errno.EEXIST:
-            pass
-        else:
-            raise
+    files = glob.glob('./*.png')
+    imgsToFix = chooseImages(args.pdfFile)
 
-    if not os.listdir('raw'):
-        subprocess.call(
-            'pdfimages -f {page} -png "{pdf}" ./raw/fig'.format(
-                page=args.fromPage, pdf=args.pdfFile),
-            shell=True)
-
-        files = glob.glob('./raw/*.png')
-        imgsToFix = chooseImages(args.pdfFile)
-
-        for f in files:
-            if os.path.basename(f).encode() in imgsToFix:
-                fixImage(f)
-
-    try:
-        os.mkdir('small')
-    except OSError as e:
-        if e.errno == errno.EEXIST:
-            pass
-        else:
-            raise
-
-    if not os.listdir('small'):
-        subprocess.call('cp -r ./raw/* ./small/', shell=True)
-
-        files = glob.glob('./small/*.png')
-
-        for f in files:
-            resizeImage(f)
-            os.rename(f, appendMark(f))
+    for f in files:
+        if os.path.basename(f).encode() in imgsToFix:
+            fixImage(f)

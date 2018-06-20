@@ -1203,13 +1203,14 @@ link."
         ;; insert image caption
         (let* ((capt-num (string-to-number (match-string 1 text)))
                (file-num (1- capt-num))
-               (img-file (concat img-dir "/small/" (format "fig-%03ds\.png" file-num))))
-          (insert "\n" (replace-match "#+CAPTION: " nil nil text) "\n")
+               (img-file (concat img-dir "/" (format "fig-%03d\.png" file-num))))
+          (insert "\n#+ATTR_ORG: :width 500px\n"
+                  (replace-match "#+CAPTION: " nil nil text) "\n")
           (if (file-exists-p img-file)
               (progn
                 (insert (format "[[file:%s]]" img-file))
                 (org-redisplay-inline-images))
-            (message "Image file fig-%03ds (Fig. %d) doesn't exist. Please capture manually!"
+            (message "Image file fig-%03d (Fig. %d) doesn't exist. Please capture manually!"
                      file-num capt-num)))
 
       ;; NOTE (et2010) sometimes below insertion could cause emacs crashing. I
